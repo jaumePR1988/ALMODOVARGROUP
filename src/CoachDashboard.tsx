@@ -5,22 +5,24 @@ import {
     Sun,
     Moon,
     Calendar,
-    Home,
-    Users,
-    Plus,
-    Clock,
-    Activity,
-    MessageSquare,
     Settings,
     ClipboardList,
     User,
-    Zap
+    Zap,
+    MapPin
 } from 'lucide-react';
+import { db } from './firebase';
+import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 
 const CoachDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-    const [showMenu, setShowMenu] = useState(false);
+    const [showMenu] = useState(false);
+    const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
+    const [stats, setStats] = useState({ totalClasses: 0, totalStudents: 0 });
     const navigate = useNavigate();
+
+    // Fake Coach ID for demo
+    const coachId = "ana-gonzalez";
 
     useEffect(() => {
         const observer = new MutationObserver((mutations) => {
@@ -32,6 +34,32 @@ const CoachDashboard = () => {
         });
         observer.observe(document.documentElement, { attributes: true });
         return () => observer.disconnect();
+    }, []);
+
+    // Fetch assigned classes and calculate stats
+    useEffect(() => {
+        const q = query(
+            collection(db, 'classes'),
+            where('coachId', '==', coachId),
+            orderBy('startTime', 'asc')
+        );
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const classesData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setAssignedClasses(classesData);
+
+            // Calculate stats
+            const totalStudents = classesData.reduce((sum, cls) => sum + (cls.currentCapacity || 0), 0);
+            setStats({
+                totalClasses: classesData.length,
+                totalStudents
+            });
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const toggleTheme = () => {
@@ -94,7 +122,7 @@ const CoachDashboard = () => {
                             <span className="text-[10px] font-black text-white bg-[#FF1F40] px-2 py-1 rounded-lg">HOY</span>
                         </div>
                         <div>
-                            <span className="text-3xl font-black block leading-none">6</span>
+                            <span className="text-3xl font-black block leading-none">{stats.totalClasses}</span>
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Clases Programadas</span>
                         </div>
                     </div>
@@ -103,10 +131,9 @@ const CoachDashboard = () => {
                             <div className={`p-2.5 rounded-xl text-blue-400 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-blue-50'}`}>
                                 <Users size={22} strokeWidth={2.5} />
                             </div>
-                            <span className="text-[10px] font-black text-green-400 bg-green-400/10 px-2 py-1 rounded-lg">94%</span>
                         </div>
                         <div>
-                            <span className="text-3xl font-black block leading-none">124</span>
+                            <span className="text-3xl font-black block leading-none">{stats.totalStudents}</span>
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Alumnos Totales</span>
                         </div>
                     </div>
@@ -127,43 +154,69 @@ const CoachDashboard = () => {
                     </div>
                 </section>
 
-                {/* Assigned Classes (Agenda del Coach) */}
-                <section>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold uppercase italic tracking-tight">Mi Agenda <span className="text-[#FF1F40]">Enero</span></h2>
-                        <button className="text-xs font-bold text-[#FF1F40] bg-[#FF1F40]/10 px-3 py-1.5 rounded-full">Ver Calendario</button>
+                {/* Agenda Section */}
+                <section className="space-y-4">
+                    <div className="flex justify-between items-end mb-2">
+                        <h2 className="text-xl font-bold dark:text-white italic uppercase tracking-tighter">Agenda de hoy</h2>
+                        <a href="#" className="text-xs font-black text-[#FF1F40] tracking-widest hover:underline uppercase">Completa</a>
                     </div>
 
-                    <div className="space-y-3">
-                        {[
-                            { title: 'Taller Técnica Boxeo', time: '17:30 - 18:30', students: '22/25', level: 'Intermedio' },
-                            { title: 'Open Box Coach Support', time: '18:30 - 19:30', students: '12/15', level: 'General' },
-                            { title: 'Kids Boxing Session', time: '19:30 - 20:20', students: '25/25', level: 'Kids' },
-                        ].map((clase, i) => (
-                            <div key={i} className={`p-4 rounded-3xl flex items-center justify-between group cursor-pointer transition-all border shadow-sm ${isDarkMode ? 'bg-[#2A2D3A] border-white/5 hover:bg-[#323645]' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-100'}`}>
-                                        <img src={`https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=100&q=80&sig=${i}`} className="w-full h-full object-cover opacity-60" alt="" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-sm uppercase leading-tight tracking-tight">{clase.title}</h4>
-                                        <div className="flex items-center text-gray-500 text-[10px] gap-1 font-bold mt-1">
-                                            <Clock size={12} />
-                                            {clase.time}
-                                            <span className="mx-1">•</span>
-                                            <span className="text-[#FF1F40]">{clase.level}</span>
+                    {assignedClasses.length === 0 ? (
+                        <div className={`p-10 rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center text-center ${isDarkMode ? 'border-gray-800 bg-[#2A2D3A]/20' : 'border-gray-200 bg-white shadow-sm'}`}>
+                            <Calendar size={32} className="text-gray-400 mb-3" />
+                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No tienes clases asignadas hoy</p>
+                        </div>
+                    ) : (
+                        assignedClasses.map((item) => (
+                            <div
+                                key={item.id}
+                                className={`relative rounded-[2.5rem] overflow-hidden group transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
+                            >
+                                <div className="p-6 space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-2xl bg-[#FF1F40] flex flex-col items-center justify-center text-white shadow-lg shadow-red-600/20">
+                                                <span className="text-xs font-black leading-none">{item.startTime}</span>
+                                                <span className="text-[8px] font-black uppercase opacity-60">AM</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-black italic uppercase leading-tight">{item.name}</h3>
+                                                <div className="flex items-center gap-2 mt-0.5 text-gray-500">
+                                                    <MapPin size={12} />
+                                                    <span className="text-[10px] font-bold uppercase">{item.group === 'box' ? 'BOX' : 'FIT'} • Sala Principal</span>
+                                                </div>
+                                            </div>
                                         </div>
+                                        <button className={`p-2 rounded-xl h-10 w-10 flex items-center justify-center transition-colors ${isDarkMode ? 'bg-[#1F2128] text-gray-500 hover:text-white' : 'bg-gray-100 text-gray-400 hover:text-gray-600'}`}>
+                                            <Settings size={18} />
+                                        </button>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${clase.students === '25/25' ? 'bg-red-400/10 text-red-500 border border-red-500/20' : 'bg-green-400/10 text-green-400'}`}>
-                                        {clase.students}
-                                    </span>
-                                    <p className="text-[8px] font-bold text-gray-500 uppercase mt-1 tracking-tighter">Pasar Lista</p>
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-gray-100/10 dark:border-white/5">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex -space-x-2">
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-[#2A2D3A] overflow-hidden">
+                                                        <img src={`https://i.pravatar.cc/150?u=${i + item.id}`} alt="user" className="w-full h-full object-cover" />
+                                                    </div>
+                                                ))}
+                                                <div className="w-6 h-6 rounded-full border-2 border-white dark:border-[#2A2D3A] bg-gray-100 dark:bg-[#1F2128] flex items-center justify-center text-[8px] font-bold text-gray-500">
+                                                    +{item.currentCapacity > 3 ? item.currentCapacity - 3 : 0}
+                                                </div>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{item.currentCapacity} Registrados</span>
+                                        </div>
+                                        <button
+                                            onClick={() => navigate(`/manage-attendance/${item.id}`)}
+                                            className="bg-[#FF1F40] text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-red-900/20 active:scale-95 transition-all hover:brightness-110 uppercase tracking-widest"
+                                        >
+                                            Ver Lista
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        ))
+                    )}
                 </section>
 
             </div>

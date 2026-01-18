@@ -52,6 +52,13 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Default theme is Dark Mode
+  useState(() => {
+    if (!document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.add('dark');
+    }
+  });
+
   return (
     <Router>
       <ErrorBoundary>

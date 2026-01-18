@@ -7,14 +7,13 @@ import {
     Tag,
     Settings,
     Trophy,
-    Volume2,
     Settings2
 } from 'lucide-react';
 import { useState } from 'react';
 
 const Notifications = () => {
     const navigate = useNavigate();
-    const [isDarkMode] = useState(true); // Sync with app state later
+    const [isDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
 
     const notifications = [
         {
@@ -62,7 +61,7 @@ const Notifications = () => {
             msg: 'estará fuera de servicio por...',
             time: '11:20 AM',
             unread: false,
-            icon: <Volume2 size={20} className="text-gray-500" />,
+            icon: <Bell size={20} className="text-gray-500" />,
             iconBg: 'bg-gray-500/10'
         },
         {

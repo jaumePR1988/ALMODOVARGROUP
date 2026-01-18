@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
     Trophy,
-    Volume2,
+    Bell,
     Tag,
     Info,
     Calendar
@@ -11,7 +11,7 @@ import { useState } from 'react';
 
 const NotificationSettings = () => {
     const navigate = useNavigate();
-    const [isDarkMode] = useState(true);
+    const [isDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
 
     const [settings, setSettings] = useState({
         clases: true,
@@ -104,8 +104,8 @@ const NotificationSettings = () => {
                         {/* Comunicados Generales */}
                         <div className={`p-5 flex items-center justify-between border-b ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                                    <Volume2 size={22} />
+                                <div className="w-12 h-12 rounded-2xl bg-[#FF1F40]/10 flex items-center justify-center text-[#FF1F40]">
+                                    <Bell size={22} />
                                 </div>
                                 <div>
                                     <h4 className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Comunicados Generales</h4>

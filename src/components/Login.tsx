@@ -8,11 +8,19 @@ interface LoginProps {
 const Login = ({ onLogin }: LoginProps) => {
     const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
     const [showPassword, setShowPassword] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
     const [showTerms, setShowTerms] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
 
-    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+    const toggleTheme = () => {
+        const newMode = !isDarkMode;
+        setIsDarkMode(newMode);
+        if (newMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
 
     return (
         <div className={`min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-50'}`}>

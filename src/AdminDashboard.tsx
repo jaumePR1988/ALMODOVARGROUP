@@ -9,17 +9,14 @@ import {
     Users,
     Upload,
     Plus,
-    Clock,
     LayoutGrid,
     Sun,
-    Moon,
-    User, // Added
-    Activity // Added
+    Moon
 } from 'lucide-react';
 
 const AdminDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-    const [showMenu, setShowMenu] = useState(false);
+    const [showMenu] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {

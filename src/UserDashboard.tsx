@@ -11,64 +11,35 @@ import {
   Home,
   Plus,
   User,
-  MessageSquare
+  Check
 } from 'lucide-react';
-
-// --- MOCK DATA FOR CLASSES ---
-const CLASSES = [
-  {
-    id: 1,
-    time: '09:00',
-    period: 'AM',
-    title: 'Open Box',
-    subtitle: 'Sesión libre • 60 min',
-    status: 'Disponible',
-    spots: 8
-  },
-  {
-    id: 2,
-    time: '10:30',
-    period: 'AM',
-    title: 'Fit Boxing Kids',
-    subtitle: '12-16 años • COMPLETO',
-    status: 'Lista Espera',
-    spots: 0
-  },
-  {
-    id: 3,
-    time: '18:00',
-    period: 'PM',
-    title: 'Fit Boxing WOD',
-    subtitle: 'Fuerza funcional • 50 min',
-    status: 'Reservado', // Reserved
-    spots: 4
-  },
-  {
-    id: 4,
-    time: '19:30',
-    period: 'PM',
-    title: 'Open Box',
-    subtitle: 'Sesión libre • 60 min',
-    status: 'Disponible',
-    spots: 12
-  }
-];
+import { db } from './firebase';
+import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit } from 'firebase/firestore';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   // 1. Configuración General: Dark Mode by default
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [showMenu, setShowMenu] = useState(false);
   const [weekDays, setWeekDays] = useState<{ day: string; date: string; active: boolean }[]>([]);
+  const [classList, setClassList] = useState<any[]>([]);
+  const [nextClass, setNextClass] = useState<any>(null);
+  const [userReservations, setUserReservations] = useState<string[]>([]);
+
+  // Fake User ID for demo
+  const userId = "current-user-123";
 
   useEffect(() => {
-    // Force dark mode class
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          setIsDarkMode(document.documentElement.classList.contains('dark'));
+        }
+      });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     // Generate Rolling 7-Day Window starting Today
@@ -90,13 +61,76 @@ const UserDashboard = () => {
     setWeekDays(generatedWeek);
   }, []);
 
+  // Fetch classes for Agenda
+  useEffect(() => {
+    const q = query(collection(db, 'classes'), orderBy('startTime', 'asc'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const classesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setClassList(classesData);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch user reservations
+  useEffect(() => {
+    const q = query(collection(db, 'reservations'), where('userId', '==', userId));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const resIds = querySnapshot.docs.map(doc => doc.data().classId);
+      setUserReservations(resIds);
+
+      // If there are reservations, fetch the first one for "Next Class"
+      if (resIds.length > 0) {
+        // Just for demo, take the first one. 
+        // In a real app we would sort by date and find the closest
+        const firstClassId = resIds[0];
+        const classRef = query(collection(db, 'classes'), limit(50)); // Simple fetch
+        onSnapshot(classRef, (snap) => {
+          const found = snap.docs.find(d => d.id === firstClassId);
+          if (found) setNextClass({ id: found.id, ...found.data() });
+        });
+      } else {
+        setNextClass(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleReserve = async (classId: string, current: number, max: number) => {
+    if (userReservations.includes(classId)) return;
+    if (current >= max) {
+      alert("Clase completa");
+      return;
+    }
+
+    try {
+      // 1. Add reservation
+      await addDoc(collection(db, 'reservations'), {
+        userId,
+        classId,
+        reservedAt: new Date().toISOString()
+      });
+
+      // 2. Increment capacity
+      const classRef = doc(db, 'classes', classId);
+      await updateDoc(classRef, {
+        currentCapacity: increment(1)
+      });
+
+    } catch (error) {
+      console.error("Error reserving: ", error);
+    }
+  };
+
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   // Placeholder Menu Items for User
   const menuItems = [
     { icon: <Activity size={20} />, label: 'Entrenar' },
     { icon: <Plus size={20} />, label: 'Peso' },
-    { icon: <MessageSquare size={20} />, label: 'Chat' },
+    { icon: <User size={20} />, label: 'Perfil' },
   ];
 
   return (
@@ -174,36 +208,38 @@ const UserDashboard = () => {
             <a href="#" className="text-sm font-black text-[#FF1F40] tracking-wide hover:underline">VER CALENDARIO</a>
           </div>
 
-          <div className="relative w-full h-56 rounded-3xl overflow-hidden shadow-lg group pointer-events-none">
-            {/* Image */}
-            <img
-              src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop"
-              className="absolute inset-0 w-full h-full object-cover grayscale-[30%] group-hover:scale-105 transition-transform duration-700"
-              alt="Next Class"
-            />
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
-
-            {/* Content */}
-            <div className="absolute inset-x-0 bottom-0 p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="bg-[#FF1F40] text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-lg shadow-red-900/40">HOY</span>
-                <div className="flex items-center text-white text-[10px] bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg font-bold border border-white/10">
-                  <Clock size={12} className="mr-1.5" />
-                  18:00 - 18:50
+          {nextClass ? (
+            <div className="relative w-full h-56 rounded-3xl overflow-hidden shadow-lg group">
+              <img
+                src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop"
+                className="absolute inset-0 w-full h-full object-cover grayscale-[30%]"
+                alt="Next Class"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="bg-[#FF1F40] text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-lg shadow-red-900/40">PRÓXIMA</span>
+                  <div className="flex items-center text-white text-[10px] bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg font-bold border border-white/10">
+                    <Clock size={12} className="mr-1.5" />
+                    {nextClass.startTime} - {nextClass.endTime}
+                  </div>
+                </div>
+                <h3 className="text-3xl text-white font-black italic uppercase mb-1 drop-shadow-md">{nextClass.name}</h3>
+                <div className="flex items-center text-gray-200 text-xs font-bold gap-1 uppercase">
+                  <MapPin size={14} />
+                  <span>{nextClass.group === 'box' ? 'Almodovar Box' : 'Almodovar Fit'}</span>
+                  <span className="mx-1">•</span>
+                  <span>Coach {nextClass.coachId?.split('-')[1]}</span>
                 </div>
               </div>
-
-              <h3 className="text-3xl text-white font-black italic uppercase mb-1 drop-shadow-md">Fit Boxing WOD</h3>
-
-              <div className="flex items-center text-gray-200 text-xs font-bold gap-1 uppercase">
-                <MapPin size={14} />
-                <span>Sala Principal</span>
-                <span className="mx-1">•</span>
-                <span>Coach Alex</span>
-              </div>
             </div>
-          </div>
+          ) : (
+            <div className={`w-full h-56 rounded-3xl flex flex-col items-center justify-center p-8 border-2 border-dashed ${isDarkMode ? 'border-gray-800 bg-[#2A2D3A]/30' : 'border-gray-200 bg-white'}`}>
+              <Activity size={32} className="text-gray-400 mb-4" />
+              <p className="text-sm font-bold text-gray-500 uppercase tracking-widest text-center">No tienes reservas activas</p>
+              <p className="text-[10px] text-gray-400 mt-2">¡Reserva tu próxima sesión abajo!</p>
+            </div>
+          )}
         </section>
 
         {/* 6. Acciones Rápidas (Grid 2 col) */}
@@ -236,50 +272,68 @@ const UserDashboard = () => {
           </div>
         </section>
 
-        {/* 7. Lista de Clases (Agenda) */}
-        <section className="space-y-4">
-          {CLASSES.map((item) => (
-            <div
-              key={item.id}
-              className={`p-5 rounded-3xl flex items-center justify-between relative overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
-            >
-              {/* Left Decoration Border */}
-              <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${item.status === 'Reservado' ? 'bg-[#FF1F40]' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+        <section className="space-y-4 pb-10">
+          <div className="flex justify-between items-end mb-4">
+            <h2 className="text-xl font-bold dark:text-white">Agenda</h2>
+            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{classList.length} Disponibles</span>
+          </div>
 
-              <div className="flex items-center gap-4 pl-2">
-                <div className="flex flex-col text-center w-12">
-                  <span className={`text-sm font-black ${item.status === 'Reservado' ? 'text-[#FF1F40]' : 'text-gray-900 dark:text-white'}`}>
-                    {item.time}
-                  </span>
-                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase">{item.period}</span>
-                </div>
-
-                <div>
-                  <h4 className="font-bold text-gray-900 dark:text-white uppercase leading-tight mb-0.5">{item.title}</h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">{item.subtitle}</p>
-                </div>
-              </div>
-
-              {/* Action Button Logic */}
-              <div>
-                {item.status === 'Reservado' && (
-                  <button className="bg-[#FF1F40] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md shadow-red-900/20 active:scale-95 transition-transform">
-                    Reservado
-                  </button>
-                )}
-                {item.status === 'Disponible' && (
-                  <button className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                    Reservar
-                  </button>
-                )}
-                {item.status === 'Lista Espera' && (
-                  <button className="border border-gray-300 dark:border-gray-600 text-gray-400 text-xs font-bold px-4 py-2 rounded-xl cursor-not-allowed">
-                    Lista Esp.
-                  </button>
-                )}
-              </div>
+          {classList.length === 0 ? (
+            <div className="py-10 text-center opacity-40">
+              <Calendar size={40} className="mx-auto mb-3" />
+              <p className="text-sm font-bold uppercase tracking-widest">No hay clases hoy</p>
             </div>
-          ))}
+          ) : (
+            classList.map((item) => {
+              const isReserved = userReservations.includes(item.id);
+              const isFull = item.currentCapacity >= item.maxCapacity;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`p-5 rounded-3xl flex items-center justify-between relative overflow-hidden transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
+                >
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isReserved ? 'bg-[#FF1F40]' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+
+                  <div className="flex items-center gap-5">
+                    <div className="flex flex-col items-center min-w-[50px]">
+                      <span className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{item.startTime}</span>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase">
+                        {item.group === 'box' ? 'BOX' : 'FIT'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <h4 className={`text-base font-black italic uppercase ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{item.name}</h4>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1.5">
+                        <User size={12} /> Coach {item.coachId?.split('-')[1]} • {item.maxCapacity - item.currentCapacity} plazas
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleReserve(item.id, item.currentCapacity, item.maxCapacity)}
+                    disabled={isReserved || isFull}
+                    className={`
+                      px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all
+                      ${isReserved
+                        ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                        : isFull
+                          ? 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                          : 'bg-[#FF1F40] text-white shadow-lg shadow-red-900/20 hover:scale-105 active:scale-95'}
+                    `}
+                  >
+                    {isReserved ? (
+                      <div className="flex items-center gap-2">
+                        <Check size={14} strokeWidth={3} />
+                        RESERVADO
+                      </div>
+                    ) : (isFull ? 'COMPLETO' : 'RESERVAR')}
+                  </button>
+                </div>
+              );
+            })
+          )}
         </section>
 
       </div>

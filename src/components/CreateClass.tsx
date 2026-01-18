@@ -10,19 +10,30 @@ import {
     Plus,
     Minus,
     Bell,
-    Check
+    Check,
+    Loader2
 } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const CreateClass = () => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
 
-    // Form States
-    const [group, setGroup] = useState<'box' | 'fit'>('box');
-    const [selectedDays, setSelectedDays] = useState<string[]>(['M']);
-    const [capacity, setCapacity] = useState(20);
-    const [repeatAllYear, setRepeatAllYear] = useState(true);
     const [notifyUsers, setNotifyUsers] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Inputs
+    const [name, setName] = useState('Crossfit Morning');
+    const [group, setGroup] = useState<'box' | 'fit'>('box');
+    const [startDate, setStartDate] = useState('2023-10-24');
+    const [startTime, setStartTime] = useState('09:00');
+    const [endTime, setEndTime] = useState('10:00');
+    const [selectedDays, setSelectedDays] = useState<string[]>(['M']);
+    const [repeatAllYear, setRepeatAllYear] = useState(false);
+    const [coachId, setCoachId] = useState('ana-gonzalez');
+    const [capacity, setCapacity] = useState(25);
+    const [description, setDescription] = useState('');
 
     // Sync theme
     useEffect(() => {
@@ -43,6 +54,36 @@ const CreateClass = () => {
         }
     };
 
+    const handleSave = async () => {
+        if (!name || selectedDays.length === 0) return;
+
+        setIsLoading(true);
+        try {
+            await addDoc(collection(db, 'classes'), {
+                name,
+                group,
+                startDate,
+                startTime,
+                endTime,
+                days: selectedDays,
+                repeatAllYear,
+                coachId,
+                maxCapacity: capacity,
+                currentCapacity: 0,
+                description,
+                notifyUsers,
+                createdAt: serverTimestamp(),
+                status: 'Disponible'
+            });
+            navigate('/manage-classes');
+        } catch (error) {
+            console.error("Error adding document: ", error);
+            alert("Error al guardar la clase");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className={`min-h-screen transition-colors duration-500 pb-20 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
             {/* Header */}
@@ -56,7 +97,12 @@ const CreateClass = () => {
                 <h1 className={`text-sm font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     Nueva Clase
                 </h1>
-                <button className="text-xs font-black text-[#FF1F40] uppercase tracking-widest hover:opacity-80 transition-opacity">
+                <button
+                    onClick={handleSave}
+                    disabled={isLoading}
+                    className="text-xs font-black text-[#FF1F40] uppercase tracking-widest hover:opacity-80 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                >
+                    {isLoading && <Loader2 size={14} className="animate-spin" />}
                     Guardar
                 </button>
             </header>
@@ -82,10 +128,11 @@ const CreateClass = () => {
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Nombre de la clase</h3>
                     <input
                         type="text"
-                        defaultValue="Crossfit Morning"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         className={`w-full py-5 px-6 rounded-2xl outline-none font-black text-base transition-all ${isDarkMode
-                                ? 'bg-[#2A2D3A] text-white border border-transparent focus:border-[#FF1F40]/30'
-                                : 'bg-white text-gray-900 border border-gray-200 shadow-sm focus:border-[#FF1F40]/30'
+                            ? 'bg-[#2A2D3A] text-white border border-transparent focus:border-[#FF1F40]/30'
+                            : 'bg-white text-gray-900 border border-gray-200 shadow-sm focus:border-[#FF1F40]/30'
                             }`}
                     />
                 </div>
@@ -140,8 +187,9 @@ const CreateClass = () => {
                             <Calendar size={20} />
                         </div>
                         <input
-                            type="text"
-                            defaultValue="10/24/2023"
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
                             className={`w-full py-5 pl-14 pr-14 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                         />
                         <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-gray-400">
@@ -156,8 +204,9 @@ const CreateClass = () => {
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Inicio</h3>
                         <div className={`relative ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm'} rounded-2xl`}>
                             <input
-                                type="text"
-                                defaultValue="09:00 AM"
+                                type="time"
+                                value={startTime}
+                                onChange={(e) => setStartTime(e.target.value)}
                                 className={`w-full py-5 px-6 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                             />
                             <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-gray-400">
@@ -169,8 +218,9 @@ const CreateClass = () => {
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Fin</h3>
                         <div className={`relative ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm'} rounded-2xl`}>
                             <input
-                                type="text"
-                                defaultValue="10:00 AM"
+                                type="time"
+                                value={endTime}
+                                onChange={(e) => setEndTime(e.target.value)}
                                 className={`w-full py-5 px-6 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                             />
                             <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-gray-400">
@@ -182,11 +232,15 @@ const CreateClass = () => {
 
                 {/* Main Publish Button Section */}
                 <div className="pt-4">
-                    <button className="w-full bg-[#FF1F40] py-6 rounded-[2rem] flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest shadow-[0_15px_35px_rgba(255,31,64,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    <button
+                        onClick={handleSave}
+                        disabled={isLoading}
+                        className="w-full bg-[#FF1F40] py-6 rounded-[2rem] flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest shadow-[0_15px_35px_rgba(255,31,64,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                            <Plus size={20} strokeWidth={4} />
+                            {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} strokeWidth={4} />}
                         </div>
-                        Publicar Clase
+                        {isLoading ? 'Publicando...' : 'Publicar Clase'}
                     </button>
 
                     {/* Week Days Selection Below Button */}
@@ -236,8 +290,14 @@ const CreateClass = () => {
                             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-500">
                                 <User size={18} />
                             </div>
-                            <select className={`w-full py-5 pl-12 pr-10 rounded-2xl bg-transparent outline-none font-bold text-sm appearance-none ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                <option>Ana González (Cros:</option>
+                            <select
+                                value={coachId}
+                                onChange={(e) => setCoachId(e.target.value)}
+                                className={`w-full py-5 pl-12 pr-10 rounded-2xl bg-transparent outline-none font-bold text-sm appearance-none ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                            >
+                                <option value="ana-gonzalez">Ana González (CrossBox)</option>
+                                <option value="alex-coach">Alex Coach (FitBoxing)</option>
+                                <option value="sergio-coach">Sergio Coach (WOD)</option>
                             </select>
                             <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-gray-400">
                                 <ChevronLeft className="rotate-[-90deg]" size={16} />
@@ -268,6 +328,8 @@ const CreateClass = () => {
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Descripción</h3>
                     <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
                         placeholder="Añade detalles sobre la clase, equipamiento necesario, etc..."
                         className={`w-full py-5 px-6 rounded-[2rem] outline-none font-medium text-sm transition-all h-32 resize-none ${isDarkMode
                             ? 'bg-[#2A2D3A] text-white border border-transparent focus:border-[#FF1F40]/30'
