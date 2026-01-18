@@ -105,7 +105,10 @@ const AdminDashboard = () => {
                 <section>
                     <h2 className={`text-xs font-bold uppercase tracking-[0.2em] mb-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Gestión Rápida</h2>
                     <div className="grid grid-cols-2 gap-4">
-                        <button className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-md group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}>
+                        <button
+                            onClick={() => navigate('/manage-classes')}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-md group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                        >
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
                                 <Calendar size={28} />
                             </div>
