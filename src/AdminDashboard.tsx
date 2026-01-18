@@ -42,7 +42,7 @@ const AdminDashboard = () => {
     ];
 
     return (
-        <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-100 text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
+        <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
 
                 {/* Header */}
@@ -75,7 +75,7 @@ const AdminDashboard = () => {
 
                 {/* Stats Grid */}
                 <section className="grid grid-cols-2 gap-4">
-                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-5 rounded-3xl shadow-sm flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
+                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-5 rounded-3xl flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
                         <div className="flex justify-between items-start">
                             <div className={`p-2 rounded-xl text-pink-400 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-pink-50'}`}>
                                 <Users size={20} />
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Usuarios Activos</span>
                         </div>
                     </div>
-                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-5 rounded-3xl shadow-sm flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
+                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-5 rounded-3xl flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
                         <div className="flex justify-between items-start">
                             <div className={`p-2 rounded-xl text-blue-400 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-blue-50'}`}>
                                 <LayoutGrid size={20} />
@@ -107,7 +107,7 @@ const AdminDashboard = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <button
                             onClick={() => navigate('/manage-classes')}
-                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-md group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
                         >
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
                                 <Calendar size={28} />
@@ -117,7 +117,7 @@ const AdminDashboard = () => {
 
                         <button
                             onClick={() => navigate('/users')} // Placeholder
-                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-md group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
                         >
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
                                 <Users size={28} />
@@ -127,7 +127,7 @@ const AdminDashboard = () => {
 
                         <button
                             onClick={() => navigate('/notifications')}
-                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-md group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
                         >
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
                                 <Bell size={28} />
@@ -137,7 +137,7 @@ const AdminDashboard = () => {
 
                         <button
                             onClick={() => navigate('/content')} // Placeholder
-                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 shadow-md group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
                         >
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
                                 <Upload size={28} />

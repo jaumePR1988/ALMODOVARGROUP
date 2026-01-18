@@ -41,7 +41,7 @@ const CoachDashboard = () => {
     ];
 
     return (
-        <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-100 text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
+        <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
 
                 {/* Header */}
@@ -74,7 +74,7 @@ const CoachDashboard = () => {
 
                 {/* Coach Stats Grid */}
                 <section className="grid grid-cols-2 gap-4">
-                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-5 rounded-3xl shadow-sm flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
+                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-5 rounded-3xl flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
                         <div className="flex justify-between items-start">
                             <div className={`p-2.5 rounded-xl text-orange-400 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-orange-50'}`}>
                                 <Activity size={22} strokeWidth={2.5} />
@@ -86,7 +86,7 @@ const CoachDashboard = () => {
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Clases Programadas</span>
                         </div>
                     </div>
-                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} p-5 rounded-3xl shadow-sm flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
+                    <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-5 rounded-3xl flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
                         <div className="flex justify-between items-start">
                             <div className={`p-2.5 rounded-xl text-blue-400 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-blue-50'}`}>
                                 <Users size={22} strokeWidth={2.5} />

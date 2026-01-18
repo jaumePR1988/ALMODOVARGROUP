@@ -100,7 +100,7 @@ const UserDashboard = () => {
   ];
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 font-sans ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-100 text-gray-900'} overflow-x-hidden pb-24`}>
+    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
       {/* Mobile Wrapper: max-w-md mx-auto */}
       <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
 
@@ -157,7 +157,7 @@ const UserDashboard = () => {
                   flex-shrink-0 flex flex-col items-center justify-center w-14 h-20 rounded-2xl transition-all cursor-pointer
                   ${day.active
                     ? 'bg-[#FF1F40] text-white shadow-lg shadow-red-900/30'
-                    : 'bg-white dark:bg-[#2A2D3A] text-gray-500 dark:text-gray-400 border border-transparent hover:border-[#FF1F40]/50'}
+                    : `rounded-[2rem] overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
                 `}
               >
                 <span className="text-[10px] font-bold uppercase mb-1">{day.day}</span>

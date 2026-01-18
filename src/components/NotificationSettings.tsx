@@ -143,7 +143,7 @@ const NotificationSettings = () => {
                 </div>
 
                 {/* Info Box */}
-                <div className={`p-6 rounded-[2rem] flex gap-4 ${isDarkMode ? 'bg-[#2A2D3A]/50 border border-white/5' : 'bg-gray-100'}`}>
+                <div className={`p-6 rounded-[2rem] flex gap-4 ${isDarkMode ? 'bg-[#2A2D3A]/50 border border-white/5' : 'bg-gray-200/50'}`}>
                     <div className="shrink-0 mt-1">
                         <div className={`p-1.5 rounded-full ${isDarkMode ? 'bg-gray-400/20 text-gray-400' : 'bg-gray-500/10 text-gray-500'}`}>
                             <Info size={16} />

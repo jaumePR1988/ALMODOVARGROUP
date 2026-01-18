@@ -86,7 +86,7 @@ const Notifications = () => {
     }, {});
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
             {/* Header */}
             <header className={`sticky top-0 z-[200] px-6 py-5 flex items-center justify-between backdrop-blur-md ${isDarkMode ? 'bg-[#1F2128]/80' : 'bg-white/80'}`}>
                 <button
@@ -132,7 +132,7 @@ const Notifications = () => {
                     {Object.keys(groupedNotifications).map((group) => (
                         <div key={group} className="space-y-4">
                             <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">{group}</h3>
-                            <div className={`rounded-[2rem] overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-200/50'}`}>
+                            <div className={`rounded-[2rem] overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}>
                                 {groupedNotifications[group].map((notif: any, idx: number) => (
                                     <div
                                         key={notif.id}
