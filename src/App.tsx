@@ -44,6 +44,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 
 import Login from './components/Login';
 import Notifications from './components/Notifications';
+import NotificationSettings from './components/NotificationSettings';
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +77,7 @@ const App = () => {
               }
             />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/notification-settings" element={<NotificationSettings />} />
           </Routes>
         )}
       </ErrorBoundary>

@@ -118,7 +118,10 @@ const Notifications = () => {
                         <button className="text-[10px] font-black text-[#FF1F40] uppercase tracking-wider hover:underline">
                             Marcar todo leído
                         </button>
-                        <button className={`p-2 rounded-xl transition-colors ${isDarkMode ? 'bg-white/5 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-500'}`}>
+                        <button
+                            onClick={() => navigate('/notification-settings')}
+                            className={`p-2 rounded-xl transition-colors ${isDarkMode ? 'bg-white/5 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-500'}`}
+                        >
                             <Settings2 size={18} />
                         </button>
                     </div>
