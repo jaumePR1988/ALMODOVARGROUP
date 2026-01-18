@@ -216,7 +216,7 @@ const Login = ({ onLogin }: LoginProps) => {
 
             {/* Brand Header */}
             <div className="flex flex-col items-center mb-10 text-center animate-in fade-in zoom-in duration-700">
-                <div className={`relative w-32 h-32 rounded-full flex items-center justify-center border-2 border-[#FF1F40]/50 shadow-[0_0_50px_rgba(255,31,64,0.3)] overflow-hidden mb-6 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
+                <div className="relative w-32 h-32 bg-white rounded-full flex items-center justify-center border-2 border-[#FF1F40]/50 shadow-[0_0_50px_rgba(255,31,64,0.3)] overflow-hidden mb-6">
                     <img
                         src="/logo.png"
                         alt="Almodovar Group Logo"
@@ -395,26 +395,6 @@ const Login = ({ onLogin }: LoginProps) => {
                     {activeTab === 'login' ? 'Acceso Clientes' : 'Crear Cuenta'}
                 </button>
 
-                {/* Social Login */}
-                <div className="mt-8">
-                    <div className="relative flex items-center justify-center mb-6">
-                        <div className={`w-full border-t ${isDarkMode ? 'border-white/5' : 'border-gray-200'}`}></div>
-                        <span className={`absolute px-4 text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-[#2A2D3A] text-gray-500' : 'bg-white text-gray-400'}`}>O regístrate con</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
-                            <Chrome size={18} className="text-white" />
-                            Google
-                        </button>
-                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
-                            <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center overflow-hidden">
-                                <span className="text-black text-[10px] font-black pb-0.5"></span>
-                            </div>
-                            Apple
-                        </button>
-                    </div>
-                </div>
             </div>
 
             {/* Footer Links */}
