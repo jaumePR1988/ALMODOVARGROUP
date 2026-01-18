@@ -18,19 +18,31 @@ import {
 } from 'lucide-react';
 
 const AdminDashboard = () => {
-    const [isDarkMode, setIsDarkMode] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
     const [showMenu, setShowMenu] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (isDarkMode) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    setIsDarkMode(document.documentElement.classList.contains('dark'));
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+        return () => observer.disconnect();
+    }, []);
+
+    const toggleTheme = () => {
+        const newDarkMode = !isDarkMode;
+        setIsDarkMode(newDarkMode);
+        if (newDarkMode) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
-    }, [isDarkMode]);
-
-    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+    };
 
     // Menu Items for Admin
     const menuItems = [
@@ -136,6 +148,26 @@ const AdminDashboard = () => {
                         </button>
 
                         <button
+                            onClick={() => navigate('/manage-groups')} // Placeholder
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                        >
+                            <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                                <Activity size={28} />
+                            </div>
+                            <span className={`font-bold text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Gestión Grupos</span>
+                        </button>
+
+                        <button
+                            onClick={() => navigate('/manage-coaches')} // Placeholder
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                        >
+                            <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                                <User size={28} />
+                            </div>
+                            <span className={`font-bold text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Gestión Coach</span>
+                        </button>
+
+                        <button
                             onClick={() => navigate('/content')} // Placeholder
                             className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
                         >
@@ -147,45 +179,7 @@ const AdminDashboard = () => {
                     </div>
                 </section>
 
-                {/* Upcoming Classes (Próximas Clases) */}
-                <section>
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold">Próximas Clases</h2>
-                        <button className="text-sm font-bold text-[#FF1F40]">Ver todo</button>
-                    </div>
-
-                    <div className="space-y-3">
-                        {[
-                            { title: 'Fit Boxing WOD', time: '17:30 - 18:20', members: '18/25', status: 'Asistentes', color: 'green' },
-                            { title: 'Servicios OPEN BOX', time: '18:30 - 19:30', members: '23/25', status: 'Casi lleno', color: 'yellow' },
-                            { title: 'Fit Boxing KIDS', time: '19:30 - 20:20', members: 'Finalizada', status: '', color: 'gray' },
-                        ].map((clase, i) => (
-                            <div key={i} className={`p-4 rounded-3xl flex items-center justify-between group cursor-pointer transition-colors shadow-sm ${isDarkMode ? 'bg-[#2A2D3A] hover:bg-[#323645]' : 'bg-white hover:bg-gray-50'}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-100'}`}>
-                                        <img src="https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=100&q=80" className="w-full h-full object-cover opacity-60" alt="" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-sm uppercase leading-tight">{clase.title}</h4>
-                                        <div className="flex items-center text-gray-500 text-[10px] gap-1 font-bold">
-                                            <Clock size={12} />
-                                            {clase.time}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${clase.color === 'green' ? 'bg-green-400/10 text-green-400' :
-                                        clase.color === 'yellow' ? 'bg-yellow-400/10 text-yellow-400' :
-                                            'bg-gray-400/10 text-gray-400'
-                                        }`}>
-                                        {clase.members}
-                                    </span>
-                                    {clase.status && <p className="text-[8px] font-bold text-gray-500 uppercase mt-1 tracking-wider">{clase.status}</p>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
+                <div className="h-10"></div>
 
             </div>
 

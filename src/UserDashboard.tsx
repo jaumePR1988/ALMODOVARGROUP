@@ -241,7 +241,7 @@ const UserDashboard = () => {
           {CLASSES.map((item) => (
             <div
               key={item.id}
-              className="bg-white dark:bg-[#2A2D3A] p-5 rounded-3xl flex items-center justify-between shadow-sm relative overflow-hidden"
+              className={`p-5 rounded-3xl flex items-center justify-between relative overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
             >
               {/* Left Decoration Border */}
               <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${item.status === 'Reservado' ? 'bg-[#FF1F40]' : 'bg-gray-200 dark:bg-gray-700'}`}></div>

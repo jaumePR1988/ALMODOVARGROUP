@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
-    Bell,
     Trophy,
     Volume2,
     Tag,
