@@ -1,5 +1,9 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import UserDashboard from './UserDashboard';
+import AdminDashboard from './AdminDashboard';
+import CoachDashboard from './CoachDashboard';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -18,9 +22,17 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '20px', color: 'red' }}>
-          <h1>Something went wrong.</h1>
-          <pre>{this.state.error && this.state.error.toString()}</pre>
+        <div className="min-h-screen bg-red-900 text-white flex items-center justify-center p-8 font-mono">
+          <div className="max-w-xl">
+            <h1 className="text-3xl font-bold mb-4">Runtime Error</h1>
+            <pre className="bg-red-950 p-4 rounded-xl overflow-auto text-sm">{this.state.error?.message}</pre>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-6 px-6 py-3 bg-white text-red-900 font-bold rounded-xl"
+            >
+              Reload Page
+            </button>
+          </div>
         </div>
       );
     }
@@ -29,12 +41,31 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
-function App() {
+const App = () => {
   return (
-    <ErrorBoundary>
-      <UserDashboard />
-    </ErrorBoundary>
-  )
-}
+    <Router>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/" element={<UserDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/coach" element={<CoachDashboard />} />
+          <Route
+            path="/switch"
+            element={
+              <div className="min-h-screen bg-[#1F2128] text-white flex flex-col items-center justify-center gap-6 p-10 font-sans">
+                <h2 className="text-2xl font-bold italic">Seleccionar Vista <span className="text-[#FF1F40]">Dev</span></h2>
+                <div className="flex flex-col gap-4 w-full max-w-xs">
+                  <Link to="/" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Usuario</Link>
+                  <Link to="/coach" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Coach</Link>
+                  <Link to="/admin" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Administrador</Link>
+                </div>
+              </div>
+            }
+          />
+        </Routes>
+      </ErrorBoundary>
+    </Router>
+  );
+};
 
 export default App;

@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Bell,
   Sun,
   Moon,
   MapPin,
   Clock,
-  Dumbbell,
   Activity,
   Calendar,
   Home,
+  Plus,
   User,
-  Plus
+  MessageSquare
 } from 'lucide-react';
 
 // --- MOCK DATA FOR CLASSES ---
@@ -56,6 +56,7 @@ const CLASSES = [
 const UserDashboard = () => {
   // 1. Configuración General: Dark Mode by default
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [showMenu, setShowMenu] = useState(false);
   const [weekDays, setWeekDays] = useState<{ day: string; date: string; active: boolean }[]>([]);
 
   useEffect(() => {
@@ -89,42 +90,42 @@ const UserDashboard = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  return (
-    // Base Container: #1F2128 (brand-dark) in dark mode
-    <div className="min-h-screen bg-gray-100 dark:bg-[#1F2128] text-gray-900 dark:text-white font-sans transition-colors duration-300 pb-32">
+  // Placeholder Menu Items for User
+  const menuItems = [
+    { icon: <Activity size={20} />, label: 'Entrenar' },
+    { icon: <Plus size={20} />, label: 'Peso' },
+    { icon: <MessageSquare size={20} />, label: 'Chat' },
+  ];
 
+  return (
+    <div className={`min-h-screen transition-colors duration-300 font-sans ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-100 text-gray-900'} overflow-x-hidden pb-24`}>
       {/* Mobile Wrapper: max-w-md mx-auto */}
-      <div className="max-w-md mx-auto relative px-6 pt-6 space-y-8">
+      <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
 
         {/* 2. Header */}
-        <header className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full border-2 border-[#FF1F40] p-0.5">
-              <img
-                src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&auto=format&fit=crop&q=60"
-                alt="Avatar"
-                className="w-full h-full object-cover rounded-full"
-              />
+            <div className="w-12 h-12 bg-[#FF1F40] rounded-full flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-red-600/20">
+              AG
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Hola, Alex</p>
-              <h1 className="text-xl font-bold leading-tight">Vamos a entrenar</h1>
+              <h1 className="text-xl font-bold leading-tight tracking-tight">Almodovar <span className="text-[#FF1F40]">Group</span> <span className="text-[10px] opacity-30">v2.1</span></h1>
+              <p className="text-xs font-semibold text-gray-500/80 dark:text-gray-400/80">Hola, Jaume 👋</p>
             </div>
           </div>
-
-          <div className="flex gap-2">
+          <div className="flex gap-2.5">
             <button
               onClick={toggleTheme}
-              className="w-10 h-10 rounded-full bg-white dark:bg-[#2A2D3A] flex items-center justify-center text-gray-600 dark:text-white shadow-sm"
+              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600 border border-gray-100'}`}
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button className="w-10 h-10 rounded-full bg-white dark:bg-[#2A2D3A] flex items-center justify-center text-gray-600 dark:text-white shadow-sm relative">
+            <button className={`w-11 h-11 rounded-full flex items-center justify-center relative shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600 border border-gray-100'}`}>
               <Bell size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#FF1F40] rounded-full border-2 border-white dark:border-[#2A2D3A]"></span>
+              <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-[#FF1F40] rounded-full border-2 border-white dark:border-[#2A2D3A]"></span>
             </button>
           </div>
-        </header>
+        </div>
 
         {/* 3. Créditos (Grid 2 col) */}
         <section className="grid grid-cols-2 gap-4">
@@ -278,40 +279,83 @@ const UserDashboard = () => {
 
       </div>
 
-      {/* 8. Bottom Navigation (Sticky Bottom) - FIXED */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white dark:bg-[#1F2128] border-t border-gray-200 dark:border-gray-800 z-50 pb-safe">
-        <div className="flex justify-between items-end h-20 px-6 pb-4 relative">
+      {/* Action Menu (Medialuna) Overlay */}
+      {showMenu && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] transition-all duration-500"
+          onClick={() => setShowMenu(false)}
+        >
+          <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-none">
+            {menuItems.map((item, i) => {
+              const totalItems = menuItems.length;
+              const angleRange = 120;
+              const startAngle = 150;
+              const angle = startAngle - (i * (angleRange / (totalItems - 1)));
 
-          <a href="#" className="flex flex-col items-center gap-1 text-[#FF1F40] w-12">
-            <Home size={24} strokeWidth={2} />
-            <span className="text-[10px] font-bold">Inicio</span>
+              const radius = 110;
+              const x = radius * Math.cos((angle * Math.PI) / 180);
+              const y = radius * Math.sin((angle * Math.PI) / 180);
+
+              return (
+                <button
+                  key={i}
+                  className="absolute left-1/2 bottom-0 -translate-x-1/2 w-16 h-16 bg-white dark:bg-[#2A2D3A] rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 pointer-events-auto active:scale-90 transition-all duration-300 ease-out border border-gray-100 dark:border-gray-700/50 group hover:shadow-[0_0_20px_rgba(255,31,64,0.4)] hover:border-[#FF1F40] hover:scale-110"
+                  style={{
+                    transform: `translate(calc(-50% + ${x}px), -${y}px)`,
+                    opacity: showMenu ? 1 : 0,
+                    transitionDelay: `${i * 50}ms`
+                  }}
+                >
+                  <div className="text-gray-400 dark:text-gray-500 group-hover:text-[#FF1F40] transition-colors duration-300">
+                    {item.icon}
+                  </div>
+                  <span className="text-[7px] font-black uppercase tracking-tighter text-gray-500 dark:text-gray-400 group-hover:text-[#FF1F40] transition-colors duration-300">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Navigation (Fixed Bottom) */}
+      <nav className={`fixed bottom-0 left-0 right-0 z-[110] border-t px-6 pb-6 pt-3 ${isDarkMode ? 'bg-[#1F2128]/95 backdrop-blur-md border-gray-800/60' : 'bg-white/95 backdrop-blur-md border-gray-200/60'}`}>
+        <div className="max-w-[440px] mx-auto flex justify-between items-end px-4 relative">
+
+          <a href="#" className="flex flex-col items-center gap-1.5 text-[#FF1F40] w-12 transition-transform active:scale-90">
+            <Home size={26} strokeWidth={2.5} />
+            <span className="text-[10px] font-bold tracking-wide">Box</span>
           </a>
 
-          <a href="#" className="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 w-12 hover:text-[#FF1F40] dark:hover:text-white transition-colors">
-            <Calendar size={24} strokeWidth={2} />
-            <span className="text-[10px] font-bold">Agenda</span>
+          <a href="#" className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
+            <Calendar size={26} strokeWidth={2} />
+            <span className="text-[10px] font-bold tracking-wide">Agenda</span>
           </a>
 
-          {/* Giant Floating Plus Button - FIXED CUTOUT FOR LIGHT MODE */}
+          {/* Central Plus Button - PERFECTLY CENTERED */}
           <div className="relative -top-8">
-            <button className="w-16 h-16 bg-[#FF1F40] rounded-full flex items-center justify-center text-white border-[6px] border-white dark:border-[#1F2128] shadow-2xl shadow-red-900/50 active:scale-95 transition-transform group">
-              <Plus size={36} strokeWidth={4} className="group-hover:scale-110 transition-transform" />
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className={`w-16 h-16 bg-[#FF1F40] rounded-full flex items-center justify-center text-white border-[6px] shadow-2xl shadow-red-900/50 active:scale-95 transition-all group ${isDarkMode ? 'border-[#1F2128]' : 'border-gray-100'
+                } ${showMenu ? 'rotate-45' : 'rotate-0'}`}
+            >
+              <Plus size={36} strokeWidth={4} />
             </button>
           </div>
 
-          <a href="#" className="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 w-12 hover:text-[#FF1F40] dark:hover:text-white transition-colors">
-            <Activity size={24} strokeWidth={2} />
-            <span className="text-[10px] font-bold">Perfil</span>
+          <a href="#" className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
+            <Activity size={26} strokeWidth={2} />
+            <span className="text-[10px] font-bold tracking-wide">Perfil</span>
           </a>
 
-          <a href="#" className="flex flex-col items-center gap-1 text-gray-400 dark:text-gray-500 w-12 hover:text-[#FF1F40] dark:hover:text-white transition-colors">
-            <User size={24} strokeWidth={2} />
-            <span className="text-[10px] font-bold">Cuenta</span>
+          <a href="#" className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
+            <User size={26} strokeWidth={2} />
+            <span className="text-[10px] font-bold tracking-wide">Cuenta</span>
           </a>
 
         </div>
       </nav>
-
     </div>
   );
 };
