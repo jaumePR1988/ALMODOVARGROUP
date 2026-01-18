@@ -1,9 +1,10 @@
-import { Component } from 'react';
+import { Component, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import UserDashboard from './UserDashboard';
 import AdminDashboard from './AdminDashboard';
 import CoachDashboard from './CoachDashboard';
+import SplashScreen from './components/SplashScreen';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -41,28 +42,40 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
+import Login from './components/Login';
+
 const App = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   return (
     <Router>
       <ErrorBoundary>
-        <Routes>
-          <Route path="/" element={<UserDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/coach" element={<CoachDashboard />} />
-          <Route
-            path="/switch"
-            element={
-              <div className="min-h-screen bg-[#1F2128] text-white flex flex-col items-center justify-center gap-6 p-10 font-sans">
-                <h2 className="text-2xl font-bold italic">Seleccionar Vista <span className="text-[#FF1F40]">Dev</span></h2>
-                <div className="flex flex-col gap-4 w-full max-w-xs">
-                  <Link to="/" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Usuario</Link>
-                  <Link to="/coach" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Coach</Link>
-                  <Link to="/admin" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Administrador</Link>
+        {isLoading && <SplashScreen onFinish={() => setIsLoading(false)} />}
+        {!isLoading && !isAuthenticated && (
+          <Login onLogin={() => setIsAuthenticated(true)} />
+        )}
+        {isAuthenticated && (
+          <Routes>
+            <Route path="/" element={<UserDashboard />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/coach" element={<CoachDashboard />} />
+            <Route
+              path="/switch"
+              element={
+                <div className="min-h-screen bg-[#1F2128] text-white flex flex-col items-center justify-center gap-6 p-10 font-sans">
+                  <h2 className="text-2xl font-bold italic">Seleccionar Vista <span className="text-[#FF1F40]">Dev</span></h2>
+                  <div className="flex flex-col gap-4 w-full max-w-xs">
+                    <Link to="/" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Usuario</Link>
+                    <Link to="/coach" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Coach</Link>
+                    <Link to="/admin" className="p-4 bg-[#2A2D3A] hover:bg-[#FF1F40] rounded-2xl text-center font-bold transition-all">Administrador</Link>
+                    <button onClick={() => setIsAuthenticated(false)} className="p-4 border-2 border-red-500/30 text-red-500 rounded-2xl text-center font-bold transition-all">Cerrar Sesión</button>
+                  </div>
                 </div>
-              </div>
-            }
-          />
-        </Routes>
+              }
+            />
+          </Routes>
+        )}
       </ErrorBoundary>
     </Router>
   );
