@@ -44,7 +44,7 @@ const CreateClass = () => {
     };
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 pb-20 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen transition-colors duration-500 pb-20 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
             {/* Header */}
             <header className={`sticky top-0 z-[200] px-6 py-5 flex items-center justify-between backdrop-blur-md ${isDarkMode ? 'bg-[#1F2128]/80' : 'bg-white/80'}`}>
                 <button
@@ -65,7 +65,7 @@ const CreateClass = () => {
                 {/* Cover Image Upload */}
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Imagen de Portada</h3>
-                    <div className={`aspect-video rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors ${isDarkMode ? 'border-gray-800 bg-[#2A2D3A]/30 hover:bg-[#2A2D3A]/50' : 'border-gray-200 bg-white hover:bg-gray-50 shadow-sm'
+                    <div className={`aspect-video rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors ${isDarkMode ? 'border-gray-800 bg-[#2A2D3A]/30 hover:bg-[#2A2D3A]/50' : 'border-gray-300 bg-white hover:bg-gray-50 shadow-sm'
                         }`}>
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-[#1F2128] text-gray-500' : 'bg-gray-100 text-gray-400'}`}>
                             <Camera size={28} />
@@ -85,7 +85,7 @@ const CreateClass = () => {
                         defaultValue="Crossfit Morning"
                         className={`w-full py-5 px-6 rounded-2xl outline-none font-black text-base transition-all ${isDarkMode
                                 ? 'bg-[#2A2D3A] text-white border border-transparent focus:border-[#FF1F40]/30'
-                                : 'bg-white text-gray-900 border border-gray-100 shadow-sm focus:border-[#FF1F40]/30'
+                                : 'bg-white text-gray-900 border border-gray-200 shadow-sm focus:border-[#FF1F40]/30'
                             }`}
                     />
                 </div>
@@ -97,8 +97,8 @@ const CreateClass = () => {
                         <button
                             onClick={() => setGroup('box')}
                             className={`p-6 rounded-[2rem] flex flex-col items-center gap-3 transition-all relative ${group === 'box'
-                                    ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
-                                    : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
+                                ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
+                                : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
                                 }`}
                         >
                             {group === 'box' && (
@@ -115,8 +115,8 @@ const CreateClass = () => {
                         <button
                             onClick={() => setGroup('fit')}
                             className={`p-6 rounded-[2rem] flex flex-col items-center gap-3 transition-all relative ${group === 'fit'
-                                    ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
-                                    : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
+                                ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
+                                : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
                                 }`}
                         >
                             {group === 'fit' && (
@@ -135,7 +135,7 @@ const CreateClass = () => {
                 {/* Date Selection */}
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Fecha de Inicio</h3>
-                    <div className={`relative group ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm'} rounded-2xl`}>
+                    <div className={`relative group ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-md border border-gray-100'} rounded-2xl`}>
                         <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-gray-500">
                             <Calendar size={20} />
                         </div>
@@ -197,15 +197,15 @@ const CreateClass = () => {
                                     key={d}
                                     onClick={() => toggleDay(d)}
                                     className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-xs transition-all ${selectedDays.includes(d)
-                                            ? 'bg-[#FF1F40] text-white shadow-[0_5px_15px_rgba(255,31,64,0.3)]'
-                                            : (isDarkMode ? 'bg-[#2A2D3A] text-gray-500 hover:text-white' : 'bg-white text-gray-400 shadow-sm border border-gray-100')
+                                        ? 'bg-[#FF1F40] text-white shadow-[0_5px_15px_rgba(255,31,64,0.3)]'
+                                        : (isDarkMode ? 'bg-[#2A2D3A] text-gray-500 hover:text-white' : 'bg-white text-gray-400 shadow-md border border-gray-100')
                                         }`}
                                 >
                                     {d}
                                 </button>
                             ))}
                         </div>
-                        <label className={`flex items-start gap-4 p-6 rounded-[2rem] cursor-pointer transition-all ${isDarkMode ? 'bg-[#2A2D3A]/50' : 'bg-white shadow-sm'}`}>
+                        <label className={`flex items-start gap-4 p-6 rounded-[2rem] cursor-pointer transition-all ${isDarkMode ? 'bg-[#2A2D3A]/50' : 'bg-white shadow-md border border-gray-100'}`}>
                             <div className="relative flex items-center pt-1">
                                 <input
                                     type="checkbox"
@@ -214,8 +214,8 @@ const CreateClass = () => {
                                     onChange={() => setRepeatAllYear(!repeatAllYear)}
                                 />
                                 <div className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center ${repeatAllYear
-                                        ? 'bg-[#FF1F40] border-[#FF1F40]'
-                                        : (isDarkMode ? 'border-gray-700' : 'border-gray-200')
+                                    ? 'bg-[#FF1F40] border-[#FF1F40]'
+                                    : (isDarkMode ? 'border-gray-700' : 'border-gray-200')
                                     }`}>
                                     {repeatAllYear && <Check size={14} className="text-white" strokeWidth={4} />}
                                 </div>
@@ -246,7 +246,7 @@ const CreateClass = () => {
                     </div>
                     <div className="col-span-2 space-y-3">
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Aforo</h3>
-                        <div className={`flex items-center justify-between w-full h-[60px] px-2 rounded-2xl ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm'}`}>
+                        <div className={`flex items-center justify-between w-full h-[60px] px-2 rounded-2xl ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-md border border-gray-100'}`}>
                             <button
                                 onClick={() => setCapacity(Math.max(1, capacity - 1))}
                                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'hover:bg-white/5 text-gray-500' : 'hover:bg-gray-50 text-gray-400'}`}
@@ -270,14 +270,14 @@ const CreateClass = () => {
                     <textarea
                         placeholder="Añade detalles sobre la clase, equipamiento necesario, etc..."
                         className={`w-full py-5 px-6 rounded-[2rem] outline-none font-medium text-sm transition-all h-32 resize-none ${isDarkMode
-                                ? 'bg-[#2A2D3A] text-white border border-transparent focus:border-[#FF1F40]/30'
-                                : 'bg-white text-gray-900 border border-gray-100 shadow-sm focus:border-[#FF1F40]/30'
+                            ? 'bg-[#2A2D3A] text-white border border-transparent focus:border-[#FF1F40]/30'
+                            : 'bg-white text-gray-900 border border-gray-100 shadow-sm focus:border-[#FF1F40]/30'
                             }`}
                     />
                 </div>
 
                 {/* Notify Toggle */}
-                <div className={`p-6 rounded-[2rem] flex items-center justify-between ${isDarkMode ? 'bg-[#2A2D3A]/30 border border-white/5' : 'bg-white shadow-sm border border-gray-50'}`}>
+                <div className={`p-6 rounded-[2rem] flex items-center justify-between ${isDarkMode ? 'bg-[#2A2D3A]/30 border border-white/5' : 'bg-white shadow-md border border-gray-100'}`}>
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-[#FF1F40]">
                             <Bell size={22} />

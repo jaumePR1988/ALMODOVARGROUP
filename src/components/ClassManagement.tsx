@@ -85,7 +85,7 @@ const ClassManagement = () => {
     ];
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 pb-40 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen transition-colors duration-500 pb-40 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
             {/* Header */}
             <header className={`sticky top-0 z-[200] px-6 py-5 flex items-center justify-between backdrop-blur-md ${isDarkMode ? 'bg-[#1F2128]/80' : 'bg-white/80'}`}>
                 <button
@@ -106,7 +106,7 @@ const ClassManagement = () => {
 
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
                 {/* View Switcher */}
-                <div className={`p-1 rounded-2xl flex ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-gray-100'}`}>
+                <div className={`p-1 rounded-2xl flex ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-gray-200'}`}>
                     <button
                         onClick={() => setView('calendar')}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all font-bold text-sm ${view === 'calendar' ? (isDarkMode ? 'bg-[#323645] text-white shadow-lg' : 'bg-white text-gray-900 shadow-md') : 'text-gray-500'}`}
@@ -135,7 +135,7 @@ const ClassManagement = () => {
                                 <span className={`text-[10px] font-black tracking-widest ${selectedDate === d.date ? 'text-[#FF1F40]' : 'text-gray-500'}`}>{d.day}</span>
                                 <div className={`w-full aspect-square max-w-[55px] rounded-2xl flex items-center justify-center font-black text-base transition-all ${selectedDate === d.date
                                     ? 'bg-[#FF1F40] text-white shadow-[0_8px_20px_rgba(255,31,64,0.4)] scale-110'
-                                    : (isDarkMode ? 'bg-[#2A2D3A] text-gray-400 hover:bg-[#323645]' : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm border border-gray-100')
+                                    : (isDarkMode ? 'bg-[#2A2D3A] text-gray-400 hover:bg-[#323645]' : 'bg-white text-gray-600 hover:bg-white shadow-md border border-gray-100')
                                     }`}>
                                     {d.date}
                                 </div>
@@ -156,8 +156,8 @@ const ClassManagement = () => {
                         <div
                             key={cls.id}
                             className={`relative rounded-[2.5rem] overflow-hidden transition-all active:scale-[0.98] ${cls.status === 'cancelled'
-                                ? (isDarkMode ? 'bg-transparent border-2 border-dashed border-gray-800 opacity-50' : 'bg-transparent border-2 border-dashed border-gray-100 opacity-60')
-                                : (isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-200/50')
+                                ? (isDarkMode ? 'bg-transparent border-2 border-dashed border-gray-800 opacity-50' : 'bg-transparent border-2 border-dashed border-gray-200 opacity-60')
+                                : (isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30')
                                 }`}
                         >
                             {/* Accent Line */}
@@ -168,7 +168,7 @@ const ClassManagement = () => {
                             <div className="p-6 space-y-6">
                                 {/* Top Row */}
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-16 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-50'}`}>
+                                    <div className={`w-16 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-100/50'}`}>
                                         <span className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{cls.time}</span>
                                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{cls.ampm}</span>
                                     </div>
@@ -206,7 +206,7 @@ const ClassManagement = () => {
                                             {cls.capacity}/{cls.total}
                                         </span>
                                     </div>
-                                    <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-100'}`}>
+                                    <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-200'}`}>
                                         <div
                                             className={`h-full rounded-full transition-all duration-700 ${cls.status === 'cancelled' ? 'bg-gray-300 dark:bg-gray-700' :
                                                 cls.status === 'full' ? 'bg-[#FF1F40]' :
