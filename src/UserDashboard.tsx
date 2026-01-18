@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   Sun,
@@ -54,6 +55,7 @@ const CLASSES = [
 ];
 
 const UserDashboard = () => {
+  const navigate = useNavigate();
   // 1. Configuración General: Dark Mode by default
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
@@ -120,7 +122,10 @@ const UserDashboard = () => {
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button className={`w-11 h-11 rounded-full flex items-center justify-center relative shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600 border border-gray-100'}`}>
+            <button
+              onClick={() => navigate('/notifications')}
+              className={`w-11 h-11 rounded-full flex items-center justify-center relative shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600 border border-gray-100'}`}
+            >
               <Bell size={20} />
               <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-[#FF1F40] rounded-full border-2 border-white dark:border-[#2A2D3A]"></span>
             </button>
