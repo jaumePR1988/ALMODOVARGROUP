@@ -1,23 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
     Calendar as CalendarIcon,
     List,
-    Search,
     ChevronRight,
-    Users,
     MoreVertical,
     Plus,
-    Trash2,
-    Clock
+    Trash2
 } from 'lucide-react';
 
 const ClassManagement = () => {
     const navigate = useNavigate();
-    const [isDarkMode] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
     const [view, setView] = useState<'calendar' | 'list'>('list');
     const [selectedDate, setSelectedDate] = useState(24);
+
+    // Sync with global theme
+    useEffect(() => {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    setIsDarkMode(document.documentElement.classList.contains('dark'));
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+        return () => observer.disconnect();
+    }, []);
 
     const dates = [
         { day: 'LUN', date: 23 },
@@ -76,7 +86,7 @@ const ClassManagement = () => {
     ];
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen transition-colors duration-500 pb-40 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-gray-50'}`}>
             {/* Header */}
             <header className={`sticky top-0 z-[200] px-6 py-5 flex items-center justify-between backdrop-blur-md ${isDarkMode ? 'bg-[#1F2128]/80' : 'bg-white/80'}`}>
                 <button
@@ -95,7 +105,7 @@ const ClassManagement = () => {
                 </div>
             </header>
 
-            <div className="max-w-md mx-auto px-6 pt-6 space-y-6 pb-32">
+            <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
                 {/* View Switcher */}
                 <div className={`p-1 rounded-2xl flex ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-gray-100'}`}>
                     <button
@@ -114,46 +124,29 @@ const ClassManagement = () => {
                     </button>
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative group">
-                    <div className={`absolute inset-y-0 left-4 flex items-center pointer-events-none transition-colors ${isDarkMode ? 'text-gray-500 group-focus-within:text-[#FF1F40]' : 'text-gray-400'}`}>
-                        <Search size={20} />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="Buscar clase o entrenador..."
-                        className={`w-full py-4 pl-12 pr-4 rounded-2xl outline-none transition-all font-medium text-sm ${isDarkMode
-                                ? 'bg-[#2A2D3A] text-white focus:bg-[#323645] border border-transparent focus:border-[#FF1F40]/30'
-                                : 'bg-white text-gray-900 border border-gray-100 focus:border-[#FF1F40]/30 shadow-sm'
-                            }`}
-                    />
-                </div>
-
-                {/* Date Picker Horizontal */}
-                <div className="flex items-center gap-2 py-2 overflow-x-auto no-scrollbar relative">
-                    <button className="flex-shrink-0 text-gray-400 p-1 hover:text-[#FF1F40] transition-colors"><ChevronLeft size={20} /></button>
-                    <div className="flex-1 flex justify-between gap-4">
+                {/* Date Picker - Static Grid */}
+                <div className="space-y-4">
+                    <div className="grid grid-cols-6 gap-2">
                         {dates.map((d) => (
                             <button
                                 key={d.date}
                                 onClick={() => setSelectedDate(d.date)}
-                                className="flex flex-col items-center gap-1.5 min-w-[50px] transition-all"
+                                className="flex flex-col items-center gap-2 transition-all group"
                             >
                                 <span className={`text-[10px] font-black tracking-widest ${selectedDate === d.date ? 'text-[#FF1F40]' : 'text-gray-500'}`}>{d.day}</span>
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${selectedDate === d.date
-                                        ? 'bg-[#FF1F40] text-white shadow-[0_4px_15px_rgba(255,31,64,0.4)] scale-110'
-                                        : (isDarkMode ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100')
+                                <div className={`w-full aspect-square max-w-[55px] rounded-2xl flex items-center justify-center font-black text-base transition-all ${selectedDate === d.date
+                                        ? 'bg-[#FF1F40] text-white shadow-[0_8px_20px_rgba(255,31,64,0.4)] scale-110'
+                                        : (isDarkMode ? 'bg-[#2A2D3A] text-gray-400 hover:bg-[#323645]' : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm border border-gray-100')
                                     }`}>
                                     {d.date}
                                 </div>
                             </button>
                         ))}
                     </div>
-                    <button className="flex-shrink-0 text-gray-400 p-1 hover:text-[#FF1F40] transition-colors"><ChevronRight size={20} /></button>
                 </div>
 
                 {/* Section Title */}
-                <div className="flex justify-between items-end pt-4">
+                <div className="flex justify-between items-end pt-2">
                     <h2 className={`text-xl font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Clases de Hoy</h2>
                     <span className="text-[10px] font-black text-[#FF1F40] bg-[#FF1F40]/10 px-3 py-1.5 rounded-full uppercase tracking-wider">4 clases</span>
                 </div>
@@ -163,7 +156,7 @@ const ClassManagement = () => {
                     {classes.map((cls) => (
                         <div
                             key={cls.id}
-                            className={`relative rounded-[2rem] overflow-hidden transition-all active:scale-[0.98] ${cls.status === 'cancelled'
+                            className={`relative rounded-[2.5rem] overflow-hidden transition-all active:scale-[0.98] ${cls.status === 'cancelled'
                                     ? (isDarkMode ? 'bg-transparent border-2 border-dashed border-gray-800 opacity-50' : 'bg-transparent border-2 border-dashed border-gray-100 opacity-60')
                                     : (isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-200/50')
                                 }`}
@@ -194,7 +187,7 @@ const ClassManagement = () => {
                                         </div>
                                         <div className="flex items-center gap-1.5 text-gray-500">
                                             <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
-                                                <User size={12} fill="currentColor" />
+                                                <UserIcon size={12} fill="currentColor" />
                                             </div>
                                             <span className="text-xs font-bold">Instructor: {cls.instructor}</span>
                                         </div>
@@ -230,16 +223,18 @@ const ClassManagement = () => {
                 </div>
             </div>
 
-            {/* Floating Action Button */}
-            <button className="fixed bottom-32 right-6 w-16 h-16 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(255,31,64,0.4)] hover:scale-110 active:scale-90 transition-all z-[300]">
-                <Plus size={32} strokeWidth={3} />
-            </button>
+            {/* Floating Action Button - Centered */}
+            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300]">
+                <button className="w-16 h-16 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(255,31,64,0.5)] hover:scale-110 active:scale-95 transition-all outline-none">
+                    <Plus size={36} strokeWidth={3} />
+                </button>
+            </div>
         </div>
     );
 };
 
 // Helper component for Icon
-const User = ({ size, fill, className }: { size: number, fill?: string, className?: string }) => (
+const UserIcon = ({ size, fill, className }: { size: number, fill?: string, className?: string }) => (
     <svg
         width={size} height={size} viewBox="0 0 24 24" fill={fill || "none"}
         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}
