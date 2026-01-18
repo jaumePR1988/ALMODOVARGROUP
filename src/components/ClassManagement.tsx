@@ -4,7 +4,6 @@ import {
     ChevronLeft,
     Calendar as CalendarIcon,
     List,
-    ChevronRight,
     MoreVertical,
     Plus,
     Trash2
@@ -135,8 +134,8 @@ const ClassManagement = () => {
                             >
                                 <span className={`text-[10px] font-black tracking-widest ${selectedDate === d.date ? 'text-[#FF1F40]' : 'text-gray-500'}`}>{d.day}</span>
                                 <div className={`w-full aspect-square max-w-[55px] rounded-2xl flex items-center justify-center font-black text-base transition-all ${selectedDate === d.date
-                                        ? 'bg-[#FF1F40] text-white shadow-[0_8px_20px_rgba(255,31,64,0.4)] scale-110'
-                                        : (isDarkMode ? 'bg-[#2A2D3A] text-gray-400 hover:bg-[#323645]' : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm border border-gray-100')
+                                    ? 'bg-[#FF1F40] text-white shadow-[0_8px_20px_rgba(255,31,64,0.4)] scale-110'
+                                    : (isDarkMode ? 'bg-[#2A2D3A] text-gray-400 hover:bg-[#323645]' : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm border border-gray-100')
                                     }`}>
                                     {d.date}
                                 </div>
@@ -157,8 +156,8 @@ const ClassManagement = () => {
                         <div
                             key={cls.id}
                             className={`relative rounded-[2.5rem] overflow-hidden transition-all active:scale-[0.98] ${cls.status === 'cancelled'
-                                    ? (isDarkMode ? 'bg-transparent border-2 border-dashed border-gray-800 opacity-50' : 'bg-transparent border-2 border-dashed border-gray-100 opacity-60')
-                                    : (isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-200/50')
+                                ? (isDarkMode ? 'bg-transparent border-2 border-dashed border-gray-800 opacity-50' : 'bg-transparent border-2 border-dashed border-gray-100 opacity-60')
+                                : (isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-200/50')
                                 }`}
                         >
                             {/* Accent Line */}
@@ -210,8 +209,8 @@ const ClassManagement = () => {
                                     <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-100'}`}>
                                         <div
                                             className={`h-full rounded-full transition-all duration-700 ${cls.status === 'cancelled' ? 'bg-gray-300 dark:bg-gray-700' :
-                                                    cls.status === 'full' ? 'bg-[#FF1F40]' :
-                                                        cls.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                                                cls.status === 'full' ? 'bg-[#FF1F40]' :
+                                                    cls.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
                                                 }`}
                                             style={{ width: `${(cls.capacity / cls.total) * 100}%` }}
                                         ></div>
@@ -225,7 +224,10 @@ const ClassManagement = () => {
 
             {/* Floating Action Button - Centered */}
             <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300]">
-                <button className="w-16 h-16 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(255,31,64,0.5)] hover:scale-110 active:scale-95 transition-all outline-none">
+                <button
+                    onClick={() => navigate('/create-class')}
+                    className="w-16 h-16 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-[0_10px_30px_rgba(255,31,64,0.5)] hover:scale-110 active:scale-95 transition-all outline-none"
+                >
                     <Plus size={36} strokeWidth={3} />
                 </button>
             </div>
