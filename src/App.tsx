@@ -46,6 +46,7 @@ import Login from './components/Login';
 import Notifications from './components/Notifications';
 import NotificationSettings from './components/NotificationSettings';
 import ClassManagement from './components/ClassManagement';
+import CreateClass from './components/CreateClass';
 
 const App = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -80,6 +81,7 @@ const App = () => {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/notification-settings" element={<NotificationSettings />} />
             <Route path="/manage-classes" element={<ClassManagement />} />
+            <Route path="/create-class" element={<CreateClass />} />
           </Routes>
         )}
       </ErrorBoundary>
