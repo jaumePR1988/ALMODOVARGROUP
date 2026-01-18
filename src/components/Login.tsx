@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon, Phone, Calendar, MapPin, CheckCircle, User } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon, Phone, Calendar, MapPin, CheckCircle, User, Chrome } from 'lucide-react';
 
 interface LoginProps {
     onLogin: () => void;
@@ -216,11 +216,11 @@ const Login = ({ onLogin }: LoginProps) => {
 
             {/* Brand Header */}
             <div className="flex flex-col items-center mb-10 text-center animate-in fade-in zoom-in duration-700">
-                <div className="relative w-32 h-32 bg-white rounded-full flex items-center justify-center border-2 border-[#FF1F40]/30 shadow-[0_0_50px_rgba(255,31,64,0.15)] overflow-hidden p-1 mb-6">
+                <div className={`relative w-32 h-32 rounded-full flex items-center justify-center border-2 border-[#FF1F40]/50 shadow-[0_0_50px_rgba(255,31,64,0.3)] overflow-hidden mb-6 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
                     <img
                         src="/logo.png"
                         alt="Almodovar Group Logo"
-                        className="w-[110%] h-[110%] max-w-none object-cover"
+                        className="w-full h-full object-cover scale-[1.02]"
                     />
                 </div>
                 <h1 className={`text-3xl font-black tracking-tighter uppercase italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -239,8 +239,8 @@ const Login = ({ onLogin }: LoginProps) => {
                     <button
                         onClick={() => setActiveTab('login')}
                         className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all ${activeTab === 'login'
-                                ? 'bg-[#FF1F40] text-white shadow-lg'
-                                : 'text-gray-500 hover:text-gray-300'
+                            ? 'bg-[#FF1F40] text-white shadow-lg'
+                            : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         <LogIn size={18} />
@@ -249,8 +249,8 @@ const Login = ({ onLogin }: LoginProps) => {
                     <button
                         onClick={() => setActiveTab('register')}
                         className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all ${activeTab === 'register'
-                                ? 'bg-[#FF1F40] text-white shadow-lg'
-                                : 'text-gray-500 hover:text-gray-300'
+                            ? 'bg-[#FF1F40] text-white shadow-lg'
+                            : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         <UserPlus size={18} />
@@ -273,8 +273,8 @@ const Login = ({ onLogin }: LoginProps) => {
                                     type="email"
                                     placeholder="ejemplo@correo.com"
                                     className={`w-full py-4 pl-12 pr-4 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
-                                            ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
-                                            : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
+                                        ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
+                                        : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
                                         }`}
                                 />
                             </div>
@@ -287,8 +287,8 @@ const Login = ({ onLogin }: LoginProps) => {
                                     type={showPassword ? 'text' : 'password'}
                                     placeholder="••••••••"
                                     className={`w-full py-4 pl-12 pr-12 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
-                                            ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
-                                            : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
+                                        ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
+                                        : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
                                         }`}
                                 />
                                 <button
@@ -403,12 +403,14 @@ const Login = ({ onLogin }: LoginProps) => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/5 text-gray-300 hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
-                            <img src="https://www.google.com/favicon.ico" className="w-4 h-4 grayscale opacity-70" alt="Google" />
+                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
+                            <Chrome size={18} className="text-white" />
                             Google
                         </button>
-                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/5 text-gray-300 hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
-                            <img src="https://www.apple.com/favicon.ico" className="w-4 h-4 grayscale opacity-70" alt="Apple" />
+                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
+                            <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center overflow-hidden">
+                                <span className="text-black text-[10px] font-black pb-0.5"></span>
+                            </div>
                             Apple
                         </button>
                     </div>
