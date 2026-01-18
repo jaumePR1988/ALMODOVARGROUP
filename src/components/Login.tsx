@@ -10,6 +10,7 @@ const Login = ({ onLogin }: LoginProps) => {
     const [showPassword, setShowPassword] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(true);
     const [showTerms, setShowTerms] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
     const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
@@ -130,6 +131,89 @@ const Login = ({ onLogin }: LoginProps) => {
                 </button>
             </div>
 
+            {/* Modal de Centro de Ayuda */}
+            {showHelp && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className={`w-full max-w-lg max-h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 ${isDarkMode ? 'bg-[#1a1c22] border border-white/10' : 'bg-white border border-gray-100'}`}>
+                        <div className={`p-8 border-b flex justify-between items-center ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                            <h3 className={`text-1xl font-black uppercase tracking-tight italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Centro de <span className="text-[#FF1F40]">Ayuda</span>
+                            </h3>
+                            <button
+                                onClick={() => setShowHelp(false)}
+                                className="w-10 h-10 rounded-full bg-red-500/10 text-[#FF1F40] flex items-center justify-center hover:bg-red-500/20 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className={`p-8 overflow-y-auto scrollbar-hide text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            <div className="space-y-8">
+                                <section>
+                                    <h4 className="text-[#FF1F40] font-black uppercase text-xs tracking-widest mb-6 italic">Preguntas Frecuentes</h4>
+
+                                    <div className="space-y-6">
+                                        <div>
+                                            <p className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Cómo reservo una clase?</p>
+                                            <p>Una vez autorizado tu perfil por el administrador, podrás ver el calendario y reservar tu plaza en el menú de "WOD / Reservas".</p>
+                                        </div>
+
+                                        <div>
+                                            <p className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Mi perfil no ha sido autorizado?</p>
+                                            <p>La validación suele realizarse en un plazo de 24 horas. Si pasado este tiempo sigues sin acceso, por favor <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>comunícate mediante teléfono o WhatsApp.</span></p>
+                                        </div>
+
+                                        <div>
+                                            <p className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Cómo cambio mi contraseña?</p>
+                                            <p>Puedes solicitar un enlace de recuperación en la pantalla de inicio o cambiarla desde tu "Perfil" una vez dentro de la APP.</p>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div className={`border-t ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}></div>
+
+                                <section>
+                                    <h4 className="text-[#FF1F40] font-black uppercase text-xs tracking-widest mb-6 italic">Soporte Directo</h4>
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                                                <Mail className="text-[#FF1F40]" size={20} />
+                                            </div>
+                                            <div>
+                                                <p className={`font-bold text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Teléfono / WhatsApp:</p>
+                                                <p className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>662 086 632</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                                                <Mail className="text-[#FF1F40]" size={20} />
+                                            </div>
+                                            <div>
+                                                <p className={`font-bold text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Email:</p>
+                                                <p className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>almodovarbox@gmail.com</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <p className="mt-8 text-xs italic opacity-70 border-t pt-4 border-white/5">Horario de atención: Lunes a Viernes de 09:00 a 21:00.</p>
+                                </section>
+                            </div>
+                        </div>
+
+                        <div className="p-6">
+                            <button
+                                onClick={() => setShowHelp(false)}
+                                className="w-full bg-[#FF1F40] py-4 rounded-2xl text-white font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all"
+                            >
+                                Cerrar Centro de Ayuda
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Brand Header */}
             <div className="flex flex-col items-center mb-10 text-center animate-in fade-in zoom-in duration-700">
                 <div className="relative w-32 h-32 bg-white rounded-full flex items-center justify-center border-2 border-[#FF1F40]/30 shadow-[0_0_50px_rgba(255,31,64,0.15)] overflow-hidden p-1 mb-6">
@@ -245,7 +329,12 @@ const Login = ({ onLogin }: LoginProps) => {
                     Términos y Privacidad
                 </button>
                 <span className="opacity-30">|</span>
-                <button className="hover:text-[#FF1F40] transition-colors">Ayuda</button>
+                <button
+                    onClick={() => setShowHelp(true)}
+                    className="hover:text-[#FF1F40] transition-colors"
+                >
+                    Ayuda
+                </button>
             </div>
 
             <div className="mt-8 italic opacity-40">
