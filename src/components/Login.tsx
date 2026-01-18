@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon, Phone, Calendar, MapPin, CheckCircle, User } from 'lucide-react';
 
 interface LoginProps {
     onLogin: () => void;
@@ -231,16 +231,16 @@ const Login = ({ onLogin }: LoginProps) => {
                 </p>
             </div>
 
-            {/* Login Card */}
-            <div className={`w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-in slide-in-from-bottom duration-700 delay-150 ${isDarkMode ? 'bg-[#2A2D3A] border border-white/5' : 'bg-white border border-gray-100'}`}>
+            {/* Login/Register Card */}
+            <div className={`w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl animate-in slide-in-from-bottom duration-700 delay-150 ${isDarkMode ? 'bg-[#2A2D3A] border border-white/5' : 'bg-white border border-gray-100'}`}>
 
                 {/* Tabs */}
                 <div className={`flex p-1.5 rounded-2xl mb-8 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-100'}`}>
                     <button
                         onClick={() => setActiveTab('login')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'login'
-                            ? 'bg-[#FF1F40] text-white shadow-lg'
-                            : 'text-gray-500 hover:text-gray-300'
+                        className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all ${activeTab === 'login'
+                                ? 'bg-[#FF1F40] text-white shadow-lg'
+                                : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         <LogIn size={18} />
@@ -248,9 +248,9 @@ const Login = ({ onLogin }: LoginProps) => {
                     </button>
                     <button
                         onClick={() => setActiveTab('register')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all ${activeTab === 'register'
-                            ? 'bg-[#FF1F40] text-white shadow-lg'
-                            : 'text-gray-500 hover:text-gray-300'
+                        className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm transition-all ${activeTab === 'register'
+                                ? 'bg-[#FF1F40] text-white shadow-lg'
+                                : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         <UserPlus size={18} />
@@ -258,65 +258,160 @@ const Login = ({ onLogin }: LoginProps) => {
                     </button>
                 </div>
 
-                {/* Form */}
-                <div className="space-y-4">
-                    <div className="relative group">
-                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${isDarkMode ? 'text-gray-500 group-focus-within:text-[#FF1F40]' : 'text-gray-400'}`}>
-                            <Mail size={20} />
-                        </div>
-                        <input
-                            type="email"
-                            placeholder="ejemplo@correo.com"
-                            className={`w-full py-4 pl-12 pr-4 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
-                                ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
-                                : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
-                                }`}
-                        />
-                    </div>
+                {/* Form Container */}
+                <div className="space-y-6 max-h-[60vh] overflow-y-auto scrollbar-hide pr-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
 
-                    <div className="relative group">
-                        <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${isDarkMode ? 'text-gray-500 group-focus-within:text-[#FF1F40]' : 'text-gray-400'}`}>
-                            <Lock size={20} />
-                        </div>
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
-                            className={`w-full py-4 pl-12 pr-12 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
-                                ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
-                                : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
-                                }`}
-                        />
-                        <button
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#FF1F40] transition-colors"
-                        >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                        </button>
-                    </div>
+                    {activeTab === 'login' ? (
+                        <div className="space-y-4">
+                            {/* Login Fields */}
+                            <div className="relative group">
+                                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${isDarkMode ? 'text-gray-500 group-focus-within:text-[#FF1F40]' : 'text-gray-400'}`}>
+                                    <Mail size={18} />
+                                </div>
+                                <input
+                                    type="email"
+                                    placeholder="ejemplo@correo.com"
+                                    className={`w-full py-4 pl-12 pr-4 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
+                                            ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
+                                            : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
+                                        }`}
+                                />
+                            </div>
 
-                    {activeTab === 'login' && (
-                        <div className="text-right">
-                            <button className="text-[11px] font-bold text-[#FF1F40] hover:underline uppercase tracking-tight">
-                                ¿Olvidaste tu contraseña?
-                            </button>
+                            <div className="relative group">
+                                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${isDarkMode ? 'text-gray-500 group-focus-within:text-[#FF1F40]' : 'text-gray-400'}`}>
+                                    <Lock size={18} />
+                                </div>
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="••••••••"
+                                    className={`w-full py-4 pl-12 pr-12 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
+                                            ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
+                                            : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
+                                        }`}
+                                />
+                                <button
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#FF1F40] transition-colors"
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+
+                            <div className="text-right">
+                                <button className="text-[11px] font-bold text-[#FF1F40] hover:underline uppercase tracking-tight">
+                                    ¿Olvidaste tu contraseña?
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                            {/* Registration Fields */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nombre *</label>
+                                    <div className="relative group">
+                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                        <input placeholder="Juan" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Apellidos *</label>
+                                    <input placeholder="Pérez" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Teléfono *</label>
+                                    <div className="relative group">
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                        <input placeholder="600 000 000" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>F. Nacimiento</label>
+                                    <div className="relative group">
+                                        <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40] pointer-events-none" size={16} />
+                                        <input type="date" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-2 border-t border-white/5">
+                                <label className={`text-[10px] font-black uppercase tracking-[0.2em] text-[#FF1F40]`}>Dirección Completa *</label>
+                                <div className="relative group">
+                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                    <input placeholder="Calle / Avenida" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input placeholder="Nº" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    <input placeholder="Código Postal" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                </div>
+                                <input placeholder="Ciudad" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-white/5">
+                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Correo Electrónico *</label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                    <input placeholder="ejemplo@correo.com" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Contraseña *</label>
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                        <input type="password" placeholder="••••••••" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Confirmar *</label>
+                                    <div className="relative group">
+                                        <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                        <input type="password" placeholder="••••••••" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 py-2">
+                                <input type="checkbox" className="w-5 h-5 accent-[#FF1F40]" />
+                                <p className={`text-[11px] font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Acepto los <button onClick={() => setShowTerms(true)} className="text-[#FF1F40] hover:underline">términos</button> y la <button className="text-[#FF1F40] hover:underline">política de privacidad</button>
+                                </p>
+                            </div>
                         </div>
                     )}
+                </div>
 
-                    <button
-                        onClick={onLogin}
-                        className="w-full bg-[#FF1F40] py-5 rounded-2xl text-white font-black uppercase tracking-wider shadow-xl shadow-red-900/20 active:scale-95 transition-all mt-6"
-                    >
-                        {activeTab === 'login' ? 'Acceso Clientes' : 'Crear Cuenta'}
-                    </button>
+                {/* Action Button */}
+                <button
+                    onClick={onLogin}
+                    className="w-full bg-[#FF1F40] py-5 rounded-2xl text-white font-black uppercase tracking-wider shadow-xl shadow-red-900/20 active:scale-95 transition-all mt-8"
+                >
+                    {activeTab === 'login' ? 'Acceso Clientes' : 'Crear Cuenta'}
+                </button>
 
-                    {activeTab === 'login' && (
-                        <button className={`w-full py-5 rounded-2xl border-2 font-bold transition-all active:scale-95 ${isDarkMode
-                            ? 'border-gray-800 text-gray-400 hover:bg-gray-800'
-                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                            }`}>
-                            Crear una cuenta nueva
+                {/* Social Login */}
+                <div className="mt-8">
+                    <div className="relative flex items-center justify-center mb-6">
+                        <div className={`w-full border-t ${isDarkMode ? 'border-white/5' : 'border-gray-200'}`}></div>
+                        <span className={`absolute px-4 text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-[#2A2D3A] text-gray-500' : 'bg-white text-gray-400'}`}>O regístrate con</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/5 text-gray-300 hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
+                            <img src="https://www.google.com/favicon.ico" className="w-4 h-4 grayscale opacity-70" alt="Google" />
+                            Google
                         </button>
-                    )}
+                        <button className={`flex items-center justify-center gap-3 py-4 rounded-2xl border-2 font-bold text-xs transition-all active:scale-95 ${isDarkMode ? 'border-white/5 text-gray-300 hover:bg-white/5' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}>
+                            <img src="https://www.apple.com/favicon.ico" className="w-4 h-4 grayscale opacity-70" alt="Apple" />
+                            Apple
+                        </button>
+                    </div>
                 </div>
             </div>
 
