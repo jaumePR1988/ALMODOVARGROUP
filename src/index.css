@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* Force dark mode variant to trigger with the .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer theme {
+    :root {
+        --background: 255 255 255;
+        --foreground: 0 0 0;
+    }
+
+    .dark {
+        --background: 31 33 40;
+        /* #1F2128 */
+        --foreground: 255 255 255;
+    }
+}
+
+@layer base {
+    body {
+        @apply antialiased transition-colors duration-300;
+    }
+}
