@@ -11,7 +11,8 @@ import {
     Plus,
     LayoutGrid,
     Sun,
-    Moon
+    Moon,
+    Activity
 } from 'lucide-react';
 
 const AdminDashboard = () => {

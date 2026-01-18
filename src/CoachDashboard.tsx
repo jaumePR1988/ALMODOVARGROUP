@@ -9,7 +9,8 @@ import {
     ClipboardList,
     User,
     Zap,
-    MapPin
+    MapPin,
+    Activity
 } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
