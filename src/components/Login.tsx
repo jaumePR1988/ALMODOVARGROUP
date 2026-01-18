@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon, Phone, Calendar, MapPin, CheckCircle, User, Chrome } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon, Phone, Calendar, MapPin, CheckCircle, User } from 'lucide-react';
 
 interface LoginProps {
     onLogin: () => void;
