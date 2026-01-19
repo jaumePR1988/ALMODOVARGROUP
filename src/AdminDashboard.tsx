@@ -13,8 +13,7 @@ import {
     Sun,
     Moon,
     Activity,
-    User,
-    Clock
+    User
 } from 'lucide-react';
 
 const AdminDashboard = () => {
