@@ -78,10 +78,9 @@ const CoachDashboard = () => {
         const today = new Date().toISOString().split('T')[0];
         const q = query(
             collection(db, 'classes'),
-            // where('coachId', '==', coachProfileId), <-- COMENTADO PARA DEBUG
-            // where('date', '==', today), <-- COMENTADO PARA DEBUG
-            orderBy('startTime', 'asc'),
-            limit(10) // Limitamos para debug
+            where('coachId', '==', coachProfileId),
+            where('date', '==', today)
+            // orderBy removed to avoid Index issues. Sorting client-side.
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -89,6 +88,9 @@ const CoachDashboard = () => {
                 id: doc.id,
                 ...doc.data()
             }));
+
+            // Client-side sort
+            classesData.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
             setAssignedClasses(classesData);
 
@@ -168,16 +170,10 @@ const CoachDashboard = () => {
                     </div>
                 </header>
 
-                <div className="bg-yellow-500/10 border border-yellow-500/50 p-4 rounded-xl text-xs font-mono mb-4 text-yellow-500 overflow-x-auto">
-                    <p><strong>DEBUG INFO EXTENDIDO:</strong></p>
-                    <p>Mi Coach ID (Profile): {coachProfileId}</p>
-                    <p>--------------------------------</p>
-                    <p>Clases Totales encontradas (SIN FILTRO FECHA): {assignedClasses.length}</p>
-                    {assignedClasses.map(cls => (
-                        <p key={cls.id} className={cls.coachId === coachProfileId ? 'text-green-500 font-bold' : 'text-red-500'}>
-                            [{cls.date}] {cls.name} - Coach: {cls.coachId}
-                        </p>
-                    ))}
+                <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-xl text-xs font-mono mb-4 text-green-600 overflow-x-auto">
+                    <p><strong>ESTADO: CONECTADO ✅</strong></p>
+                    <p>Filtros Activos: CoachID + Fecha de hoy</p>
+                    <p>Clases Encontradas: {assignedClasses.length}</p>
                 </div>
 
                 {/* Coach Stats Grid */}
