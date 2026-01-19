@@ -366,45 +366,71 @@ const UserDashboard = () => {
               return (
                 <div
                   key={item.id}
-                  className={`p-5 rounded-3xl flex items-center justify-between relative overflow-hidden transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
+                  className={`relative rounded-[2.5rem] overflow-hidden group transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
                 >
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${isReserved ? 'bg-[#FF1F40]' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-
-                  <div className="flex items-center gap-5">
-                    <div className="flex flex-col items-center min-w-[50px]">
-                      <span className={`text-xl font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{item.startTime}</span>
-                      <span className="text-[10px] font-bold text-gray-500 uppercase">
-                        {item.group === 'box' ? 'BOX' : 'FIT'}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <h4 className={`text-base font-black italic uppercase ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{item.name}</h4>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1.5">
-                        <User size={12} /> Coach {item.coachId?.split('-')[1]} • {item.maxCapacity - item.currentCapacity} plazas
-                      </p>
-                    </div>
+                  {/* Background Image with Overlay */}
+                  <div className="absolute inset-0 z-0">
+                    <img
+                      src={item.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
+                      alt={item.name}
+                      className="w-full h-full object-cover opacity-60"
+                    />
+                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-r from-[#2A2D3A] via-[#2A2D3A]/90 to-transparent' : 'bg-gradient-to-r from-white via-white/90 to-transparent'}`} />
                   </div>
 
-                  <button
-                    onClick={() => handleReserve(item.id, item.currentCapacity, item.maxCapacity)}
-                    disabled={isReserved || isFull}
-                    className={`
-                      px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all
-                      ${isReserved
-                        ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                        : isFull
-                          ? 'bg-gray-100 dark:bg-gray-800 text-gray-400'
-                          : 'bg-[#FF1F40] text-white shadow-lg shadow-red-900/20 hover:scale-105 active:scale-95'}
-                    `}
-                  >
-                    {isReserved ? (
-                      <div className="flex items-center gap-2">
-                        <Check size={14} strokeWidth={3} />
-                        RESERVADO
+                  <div className="p-6 space-y-4 relative z-10">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-[#FF1F40] flex flex-col items-center justify-center text-white shadow-lg shadow-red-600/20">
+                          <span className="text-xs font-black leading-none">{item.startTime}</span>
+                          <span className="text-[8px] font-black uppercase opacity-60">AM</span>
+                        </div>
+                        <div>
+                          <h3 className="text-base font-black italic uppercase leading-tight">{item.name}</h3>
+                          <div className="flex items-center gap-2 mt-0.5 text-gray-500">
+                            <MapPin size={12} />
+                            <span className="text-[10px] font-bold uppercase">{item.group === 'box' ? 'BOX' : 'FIT'} • Sala Principal</span>
+                          </div>
+                        </div>
                       </div>
-                    ) : (isFull ? 'COMPLETO' : 'RESERVAR')}
-                  </button>
+
+                      {/* Capacity Badge */}
+                      <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${isFull
+                          ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                          : 'bg-green-500/10 text-green-500 border-green-500/20'
+                        }`}>
+                        {isFull ? 'COMPLETO' : `${item.currentCapacity}/${item.maxCapacity}`}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100/10 dark:border-white/5">
+                      <div className="flex items-center gap-4">
+                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                          Coach {item.coachId?.split('-')[1] || 'Staff'}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleReserve(item.id, item.currentCapacity, item.maxCapacity)}
+                        disabled={isReserved || isFull}
+                        className={`
+                                  px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg
+                                  ${isReserved
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed shadow-none'
+                            : isFull
+                              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed shadow-none'
+                              : 'bg-green-500 text-white shadow-green-900/20 hover:scale-105 active:scale-95 hover:brightness-110'}
+                                `}
+                      >
+                        {isReserved ? (
+                          <div className="flex items-center gap-2">
+                            <Check size={14} strokeWidth={3} />
+                            RESERVADO
+                          </div>
+                        ) : (isFull ? 'LLENO' : 'RESERVAR PLAZA')}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })
