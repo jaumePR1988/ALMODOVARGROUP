@@ -17,7 +17,7 @@ import {
     MessageSquare,
     LogOut
 } from 'lucide-react';
-import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 import { auth, db } from './firebase'; // Ensure db is imported if needed, otherwise just auth
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -79,8 +79,9 @@ const CoachDashboard = () => {
         const q = query(
             collection(db, 'classes'),
             // where('coachId', '==', coachProfileId), <-- COMENTADO PARA DEBUG
-            where('date', '==', today),
-            orderBy('startTime', 'asc')
+            // where('date', '==', today), <-- COMENTADO PARA DEBUG
+            orderBy('startTime', 'asc'),
+            limit(10) // Limitamos para debug
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -171,10 +172,10 @@ const CoachDashboard = () => {
                     <p><strong>DEBUG INFO EXTENDIDO:</strong></p>
                     <p>Mi Coach ID (Profile): {coachProfileId}</p>
                     <p>--------------------------------</p>
-                    <p>Clases Totales encontradas hoy: {assignedClasses.length}</p>
+                    <p>Clases Totales encontradas (SIN FILTRO FECHA): {assignedClasses.length}</p>
                     {assignedClasses.map(cls => (
                         <p key={cls.id} className={cls.coachId === coachProfileId ? 'text-green-500 font-bold' : 'text-red-500'}>
-                            [{cls.startTime}] {cls.name} - Assigned CoachID: {cls.coachId}
+                            [{cls.date}] {cls.name} - Coach: {cls.coachId}
                         </p>
                     ))}
                 </div>
