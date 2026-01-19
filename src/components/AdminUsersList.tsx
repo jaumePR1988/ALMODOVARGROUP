@@ -41,7 +41,13 @@ const AdminUsersList = () => {
 
     const handleUpdateRole = async (userId: string, role: string) => {
         try {
-            await updateDoc(doc(db, 'users', userId), { role });
+            const updates: any = { role };
+            // Admins don't have plan or group
+            if (role === 'admin') {
+                updates.plan = null;
+                updates.group = null;
+            }
+            await updateDoc(doc(db, 'users', userId), updates);
         } catch (error) {
             console.error("Error updating role:", error);
         }
@@ -64,12 +70,18 @@ const AdminUsersList = () => {
     };
 
     const handleDeleteUser = async (userId: string) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+        console.log("Attempting to delete user:", userId);
+        const confirmDelete = window.confirm('¿ESTÁS SEGURO? Esta acción eliminará permanentemente al usuario y no se puede deshacer.');
+        if (confirmDelete) {
             try {
                 await deleteDoc(doc(db, 'users', userId));
+                console.log("User deleted successfully");
             } catch (error) {
                 console.error("Error deleting user:", error);
+                alert("Error al eliminar: " + (error as Error).message);
             }
+        } else {
+            console.log("Delete cancelled by user");
         }
     };
 
@@ -246,12 +258,12 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                             <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-500' : user.role === 'coach' ? 'bg-blue-500/10 text-blue-500' : 'bg-white/10 text-gray-400'}`}>
                                 {user.role === 'admin' ? 'ADMIN' : user.role === 'coach' ? 'COACH' : 'CLIENTE'}
                             </span>
-                            {user.plan && (
+                            {user.role !== 'admin' && user.plan && (
                                 <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#FF1F40]/10 text-[#FF1F40]">
                                     {user.plan}
                                 </span>
                             )}
-                            {user.group && (
+                            {user.role !== 'admin' && user.group && (
                                 <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
                                     {user.group}
                                 </span>
@@ -277,31 +289,35 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
+                        {user.role !== 'admin' && (
+                            <div className="bg-[#1F2128] p-3 rounded-xl border border-white/5">
+                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Plan</p>
+                                <select
+                                    value={user.plan || ''}
+                                    onChange={(e) => onUpdatePlan(e.target.value)}
+                                    className="w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40]"
+                                >
+                                    <option value="">Sin Plan</option>
+                                    <option value="Mancuerna">Mancuerna (2)</option>
+                                    <option value="Burpees">Burpees (3)</option>
+                                </select>
+                            </div>
+                        )}
+                    </div>
+                    {user.role !== 'admin' && (
                         <div className="bg-[#1F2128] p-3 rounded-xl border border-white/5">
-                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Plan</p>
+                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Grupo</p>
                             <select
-                                value={user.plan || ''}
-                                onChange={(e) => onUpdatePlan(e.target.value)}
+                                value={user.group || ''}
+                                onChange={(e) => onUpdateGroup(e.target.value)}
                                 className="w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40]"
                             >
-                                <option value="">Sin Plan</option>
-                                <option value="Mancuerna">Mancuerna (2)</option>
-                                <option value="Burpees">Burpees (3)</option>
+                                <option value="">Sin Grupo</option>
+                                <option value="AlmodovarBOX">Almodóvar BOX</option>
+                                <option value="AlmodovarFIT">Almodóvar FIT</option>
                             </select>
                         </div>
-                    </div>
-                    <div className="bg-[#1F2128] p-3 rounded-xl border border-white/5">
-                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Grupo</p>
-                        <select
-                            value={user.group || ''}
-                            onChange={(e) => onUpdateGroup(e.target.value)}
-                            className="w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40]"
-                        >
-                            <option value="">Sin Grupo</option>
-                            <option value="AlmodovarBOX">Almodóvar BOX</option>
-                            <option value="AlmodovarFIT">Almodóvar FIT</option>
-                        </select>
-                    </div>
+                    )}
                 </div>
             )}
 
@@ -328,28 +344,32 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
-                            <select
-                                value={user.plan || ''}
-                                onChange={(e) => onUpdatePlan(e.target.value)}
-                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
-                            >
-                                <option value="">Sin Plan</option>
-                                <option value="Mancuerna">Mancuerna</option>
-                                <option value="Burpees">Burpees</option>
-                            </select>
-                        </div>
-                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
-                            <select
-                                value={user.group || ''}
-                                onChange={(e) => onUpdateGroup(e.target.value)}
-                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
-                            >
-                                <option value="">Sin Grupo</option>
-                                <option value="AlmodovarBOX">BOX</option>
-                                <option value="AlmodovarFIT">FIT</option>
-                            </select>
-                        </div>
+                        {user.role !== 'admin' && (
+                            <>
+                                <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                    <select
+                                        value={user.plan || ''}
+                                        onChange={(e) => onUpdatePlan(e.target.value)}
+                                        className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                    >
+                                        <option value="">Sin Plan</option>
+                                        <option value="Mancuerna">Mancuerna</option>
+                                        <option value="Burpees">Burpees</option>
+                                    </select>
+                                </div>
+                                <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                    <select
+                                        value={user.group || ''}
+                                        onChange={(e) => onUpdateGroup(e.target.value)}
+                                        className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                    >
+                                        <option value="">Sin Grupo</option>
+                                        <option value="AlmodovarBOX">BOX</option>
+                                        <option value="AlmodovarFIT">FIT</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
                     </div>
                 ) : null}
 
