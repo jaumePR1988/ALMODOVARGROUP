@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft,
     Calendar as CalendarIcon,
-    List,
     Plus,
     User,
-    Clock
+    Clock,
+    Trash2
 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 
 const ClassManagement = () => {
     const navigate = useNavigate();
@@ -17,6 +17,7 @@ const ClassManagement = () => {
     const [selectedDate, setSelectedDate] = useState(new Date().getDate());
     const [classList, setClassList] = useState<any[]>([]);
     const [weekDays, setWeekDays] = useState<{ day: string; date: number; active: boolean }[]>([]);
+    const [classToDelete, setClassToDelete] = useState<string | null>(null);
 
     // Sync with global theme
     useEffect(() => {
@@ -62,6 +63,16 @@ const ClassManagement = () => {
         });
         return () => unsubscribe();
     }, []);
+
+    const handleDeleteClass = async (classId: string) => {
+        try {
+            await deleteDoc(doc(db, 'classes', classId));
+            console.log("Class deleted successfully");
+        } catch (error) {
+            console.error("Error deleting class:", error);
+            alert("Error al eliminar la clase: " + (error instanceof Error ? error.message : "Desconocido"));
+        }
+    };
 
     return (
         <div className={`min-h-screen transition-colors duration-500 pb-40 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
@@ -151,22 +162,59 @@ const ClassManagement = () => {
                                     </div>
                                 </div>
 
-                                {/* Status/Capacity Column */}
-                                <div className="text-right">
-                                    <div className="mb-1">
-                                        <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${clase.currentCapacity >= clase.maxCapacity
-                                            ? 'bg-red-500/10 text-red-500'
-                                            : 'bg-green-500/10 text-green-500'
-                                            }`}>
-                                            {clase.currentCapacity}/{clase.maxCapacity}
-                                        </span>
-                                    </div>
-                                    <div className="w-16 bg-gray-200 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden inline-block text-left">
-                                        <div
-                                            className={`h-full rounded-full ${clase.currentCapacity >= clase.maxCapacity ? 'bg-red-500' : 'bg-[#FF1F40]'}`}
-                                            style={{ width: `${Math.min(100, (clase.currentCapacity / clase.maxCapacity) * 100)}%` }}
-                                        ></div>
-                                    </div>
+                                {/* Status/Action Column */}
+                                <div className="text-right flex flex-col items-end gap-2">
+                                    {classToDelete === clase.id ? (
+                                        <div className="flex items-center gap-2 animate-in slide-in-from-right-4">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteClass(clase.id);
+                                                    setClassToDelete(null);
+                                                }}
+                                                className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-lg shadow-red-500/30"
+                                            >
+                                                Confirmar
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setClassToDelete(null);
+                                                }}
+                                                className="bg-gray-200 dark:bg-white/10 text-gray-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase"
+                                            >
+                                                X
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="mb-1">
+                                                <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${clase.currentCapacity >= clase.maxCapacity
+                                                    ? 'bg-red-500/10 text-red-500'
+                                                    : 'bg-green-500/10 text-green-500'
+                                                    }`}>
+                                                    {clase.currentCapacity}/{clase.maxCapacity}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-16 bg-gray-200 dark:bg-gray-800 h-1.5 rounded-full overflow-hidden inline-block text-left">
+                                                    <div
+                                                        className={`h-full rounded-full ${clase.currentCapacity >= clase.maxCapacity ? 'bg-red-500' : 'bg-[#FF1F40]'}`}
+                                                        style={{ width: `${Math.min(100, (clase.currentCapacity / clase.maxCapacity) * 100)}%` }}
+                                                    ></div>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setClassToDelete(clase.id);
+                                                    }}
+                                                    className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ))

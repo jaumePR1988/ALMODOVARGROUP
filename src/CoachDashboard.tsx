@@ -16,8 +16,9 @@ import {
     Users,
     MessageSquare
 } from 'lucide-react';
-import { db } from './firebase';
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const CoachDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -25,9 +26,18 @@ const CoachDashboard = () => {
     const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
     const [stats, setStats] = useState({ totalClasses: 0, totalStudents: 0 });
     const navigate = useNavigate();
+    const [user, setUser] = useState<any>(null);
 
-    // Fake Coach ID for demo
-    const coachId = "ana-gonzalez";
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+            } else {
+                navigate('/'); // Redirect if not logged in
+            }
+        });
+        return () => unsubscribe();
+    }, [navigate]);
 
     useEffect(() => {
         const observer = new MutationObserver((mutations) => {
@@ -43,10 +53,12 @@ const CoachDashboard = () => {
 
     // Fetch assigned classes and calculate stats
     useEffect(() => {
+        if (!user) return; // Wait for user
+
         const today = new Date().toISOString().split('T')[0];
         const q = query(
             collection(db, 'classes'),
-            where('coachId', '==', coachId),
+            where('coachId', '==', user.uid),
             where('date', '==', today),
             orderBy('startTime', 'asc')
         );
@@ -56,12 +68,6 @@ const CoachDashboard = () => {
                 id: doc.id,
                 ...doc.data()
             }));
-
-            // Fallback mock only if real data for TODAY is missing
-            if (classesData.length === 0 && !querySnapshot.metadata.fromCache) {
-                // Keep it empty or add mocks if you prefer, 
-                // but let's trust the new class creation.
-            }
 
             setAssignedClasses(classesData);
 
@@ -74,7 +80,7 @@ const CoachDashboard = () => {
         });
 
         return () => unsubscribe();
-    }, [coachId]);
+    }, [user]);
 
     const toggleTheme = () => {
         const newDarkMode = !isDarkMode;
@@ -106,7 +112,7 @@ const CoachDashboard = () => {
                         </div>
                         <div>
                             <h1 className="text-xl font-bold leading-tight">Coach Panel</h1>
-                            <p className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Coach: Marc Almodovar 👋</p>
+                            <p className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Hola, {user?.displayName || 'Coach'} 👋</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
