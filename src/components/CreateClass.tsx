@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     ChevronLeft,
     Camera,
@@ -14,10 +14,13 @@ import {
     Loader2
 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const CreateClass = () => {
     const navigate = useNavigate();
+    const { classId } = useParams();
+    const isEditMode = !!classId;
+
     const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
     const [notifyUsers, setNotifyUsers] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -54,13 +57,50 @@ const CreateClass = () => {
             const coachesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setCoaches(coachesData);
 
-            // Set default if empty and not set
-            if (coachesData.length > 0 && !coachId) {
+            // Set default if empty and not set and NOT in edit mode
+            if (coachesData.length > 0 && !coachId && !isEditMode) {
                 setCoachId(coachesData[0].id);
             }
         });
         return () => unsubscribe();
-    }, [coachId]);
+    }, [coachId, isEditMode]);
+
+    // Fetch existing class data if editing
+    useEffect(() => {
+        if (isEditMode && classId) {
+            const fetchClass = async () => {
+                setIsLoading(true);
+                try {
+                    const docRef = doc(db, 'classes', classId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        setName(data.name);
+                        setGroup(data.group);
+                        setStartDate(data.date); // Assuming date stored as string YYYY-MM-DD
+                        setStartTime(data.startTime);
+                        setEndTime(data.endTime);
+                        setCoachId(data.coachId);
+                        setCapacity(data.maxCapacity);
+                        setDescription(data.description || '');
+                        setImagePreview(data.imageUrl);
+                        // Recurrence and selectedDays are harder to map back from a single instance,
+                        // so we might treat this as editing *this* specific class instance details mainly.
+                        // We will disable recurrence toggle for editing single instances to simplify logic/ux.
+                    } else {
+                        alert("No se encontró la clase.");
+                        navigate('/manage-classes');
+                    }
+                } catch (error) {
+                    console.error("Error fetching class:", error);
+                    alert("Error al cargar la clase.");
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchClass();
+        }
+    }, [isEditMode, classId, navigate]);
 
     const days = [
         { key: 'L', label: 'LUN', dayNum: 1 },
@@ -128,7 +168,8 @@ const CreateClass = () => {
             return;
         }
 
-        if (selectedDays.length === 0 && !repeatAllYear) {
+        // Only validate days if creating new recurrent classes
+        if (!isEditMode && selectedDays.length === 0 && !repeatAllYear) {
             alert("Por favor, selecciona al menos un día.");
             return;
         }
@@ -140,75 +181,97 @@ const CreateClass = () => {
 
         setIsLoading(true);
         try {
-            // Process Image if exists
+            // Process Image if exists (and changed/new) - optimizing to reuse if string is http
             let finalImageUrl = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80";
             if (imagePreview) {
-                finalImageUrl = await resizeImage(imagePreview);
+                if (imagePreview.startsWith('http')) {
+                    finalImageUrl = imagePreview;
+                } else {
+                    finalImageUrl = await resizeImage(imagePreview);
+                }
             }
 
-            const startDateObj = new Date(startDate);
-            const endOfYear = new Date(startDateObj.getFullYear(), 11, 31);
-
-            // Map keys to JS day numbers
-            const dayNumMap = days.reduce((acc, d) => ({ ...acc, [d.key]: d.dayNum }), {} as Record<string, number>);
-            const targetDayNums = selectedDays.map(d => dayNumMap[d]);
-
-            const classesToCreate = [];
-
-            if (repeatAllYear) {
-                // Generate for all year
-                let current = new Date(startDateObj);
-                while (current <= endOfYear) {
-                    if (targetDayNums.includes(current.getDay())) {
-                        classesToCreate.push({
-                            name,
-                            group,
-                            date: current.toISOString().split('T')[0],
-                            startTime,
-                            endTime,
-                            coachId,
-                            maxCapacity: capacity,
-                            currentCapacity: 0,
-                            description,
-                            imageUrl: finalImageUrl,
-                            status: 'Disponible',
-                            createdAt: serverTimestamp()
-                        });
-                    }
-                    current.setDate(current.getDate() + 1);
-                }
-            } else {
-                // Single day (using startDate)
-                classesToCreate.push({
+            if (isEditMode && classId) {
+                // Update existing document
+                await updateDoc(doc(db, 'classes', classId), {
                     name,
                     group,
-                    date: startDate,
+                    date: startDate, // Allow changing date of this specific instance
                     startTime,
                     endTime,
                     coachId,
                     maxCapacity: capacity,
-                    currentCapacity: 0,
                     description,
                     imageUrl: finalImageUrl,
-                    status: 'Disponible',
-                    createdAt: serverTimestamp()
+                    // We typically don't update createdAt or status logic here simply
                 });
+                alert('¡Clase actualizada correctamente!');
+            } else {
+                // Creation Logic (existing)
+                const startDateObj = new Date(startDate);
+                const endOfYear = new Date(startDateObj.getFullYear(), 11, 31);
+
+                // Map keys to JS day numbers
+                const dayNumMap = days.reduce((acc, d) => ({ ...acc, [d.key]: d.dayNum }), {} as Record<string, number>);
+                const targetDayNums = selectedDays.map(d => dayNumMap[d]);
+
+                const classesToCreate = [];
+
+                if (repeatAllYear) {
+                    // Generate for all year
+                    let current = new Date(startDateObj);
+                    while (current <= endOfYear) {
+                        if (targetDayNums.includes(current.getDay())) {
+                            classesToCreate.push({
+                                name,
+                                group,
+                                date: current.toISOString().split('T')[0],
+                                startTime,
+                                endTime,
+                                coachId,
+                                maxCapacity: capacity,
+                                currentCapacity: 0,
+                                description,
+                                imageUrl: finalImageUrl,
+                                status: 'Disponible',
+                                createdAt: serverTimestamp()
+                            });
+                        }
+                        current.setDate(current.getDate() + 1);
+                    }
+                } else {
+                    // Single day (using startDate)
+                    classesToCreate.push({
+                        name,
+                        group,
+                        date: startDate,
+                        startTime,
+                        endTime,
+                        coachId,
+                        maxCapacity: capacity,
+                        currentCapacity: 0,
+                        description,
+                        imageUrl: finalImageUrl,
+                        status: 'Disponible',
+                        createdAt: serverTimestamp()
+                    });
+                }
+
+                // Save all classes in parallel
+                const batchSize = 50;
+                for (let i = 0; i < classesToCreate.length; i += batchSize) {
+                    const chunk = classesToCreate.slice(i, i + batchSize);
+                    await Promise.all(chunk.map(classData =>
+                        addDoc(collection(db, 'classes'), classData)
+                    ));
+                }
+                alert(`¡Éxito! Se han creado ${classesToCreate.length} clases.`);
             }
 
-            // Save all classes in parallel
-            const batchSize = 50;
-            for (let i = 0; i < classesToCreate.length; i += batchSize) {
-                const chunk = classesToCreate.slice(i, i + batchSize);
-                await Promise.all(chunk.map(classData =>
-                    addDoc(collection(db, 'classes'), classData)
-                ));
-            }
-
-            alert(`¡Éxito! Se han creado ${classesToCreate.length} clases.`);
             navigate('/manage-classes');
         } catch (error) {
-            console.error("Error adding document: ", error);
-            alert("Error al guardar las clases: " + (error instanceof Error ? error.message : "Error desconocido"));
+            console.error("Error saving document: ", error);
+            alert("Error al guardar: " + (error instanceof Error ? error.message : "Error desconocido"));
         } finally {
             setIsLoading(false);
         }
@@ -225,7 +288,7 @@ const CreateClass = () => {
                     <ChevronLeft size={24} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
                 </button>
                 <h1 className={`text-sm font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Nueva Clase
+                    {isEditMode ? 'Editar Clase' : 'Nueva Clase'}
                 </h1>
                 <div className="w-10"></div>
             </header>
@@ -362,7 +425,7 @@ const CreateClass = () => {
                 {/* Multi-Day Selection & Recurrence */}
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Días de la semana</h3>
-                    <div className="flex justify-between items-center px-1">
+                    <div className={`flex justify-between items-center px-1 ${isEditMode ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                         {days.map(d => (
                             <button
                                 key={d.key}
@@ -377,26 +440,28 @@ const CreateClass = () => {
                         ))}
                     </div>
 
-                    <label className={`flex items-start gap-4 p-6 rounded-[2rem] cursor-pointer transition-all ${isDarkMode ? 'bg-[#2A2D3A]/50' : 'bg-white shadow-md border border-gray-100'}`}>
-                        <div className="relative flex items-center pt-1">
-                            <input
-                                type="checkbox"
-                                className="sr-only"
-                                checked={repeatAllYear}
-                                onChange={() => setRepeatAllYear(!repeatAllYear)}
-                            />
-                            <div className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center ${repeatAllYear
-                                ? 'bg-[#FF1F40] border-[#FF1F40]'
-                                : (isDarkMode ? 'border-gray-700' : 'border-gray-200')
-                                }`}>
-                                {repeatAllYear && <Check size={14} className="text-white" strokeWidth={4} />}
+                    {!isEditMode && (
+                        <label className={`flex items-start gap-4 p-6 rounded-[2rem] cursor-pointer transition-all ${isDarkMode ? 'bg-[#2A2D3A]/50' : 'bg-white shadow-md border border-gray-100'}`}>
+                            <div className="relative flex items-center pt-1">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={repeatAllYear}
+                                    onChange={() => setRepeatAllYear(!repeatAllYear)}
+                                />
+                                <div className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center ${repeatAllYear
+                                    ? 'bg-[#FF1F40] border-[#FF1F40]'
+                                    : (isDarkMode ? 'border-gray-700' : 'border-gray-200')
+                                    }`}>
+                                    {repeatAllYear && <Check size={14} className="text-white" strokeWidth={4} />}
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex-1">
-                            <h4 className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Repetir todo el año</h4>
-                            <p className="text-[10px] text-gray-500 font-medium mt-0.5">Crea las clases automáticamente hasta el 31 de Diciembre</p>
-                        </div>
-                    </label>
+                            <div className="flex-1">
+                                <h4 className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Repetir todo el año</h4>
+                                <p className="text-[10px] text-gray-500 font-medium mt-0.5">Crea las clases automáticamente hasta el 31 de Diciembre</p>
+                            </div>
+                        </label>
+                    )}
                 </div>
 
                 {/* Trainer & Capacity */}
@@ -488,7 +553,7 @@ const CreateClass = () => {
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                             {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} strokeWidth={4} />}
                         </div>
-                        {isLoading ? 'Publicando...' : 'Publicar Clase'}
+                        {isLoading ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Publicar Clase')}
                     </button>
                 </div>
             </div>

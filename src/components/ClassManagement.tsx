@@ -132,6 +132,7 @@ const ClassManagement = () => {
                         classList.filter(c => c.date === selectedDate).map((clase) => (
                             <div
                                 key={clase.id}
+                                onClick={() => navigate(`/edit-class/${clase.id}`)}
                                 className={`p-5 rounded-[2rem] flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
                             >
                                 <div className="flex items-center gap-5">

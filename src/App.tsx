@@ -143,6 +143,7 @@ const AppContent = () => {
       <Route path="/notification-settings" element={<NotificationSettings />} />
       <Route path="/manage-classes" element={<ClassManagement />} />
       <Route path="/create-class" element={<CreateClass />} />
+      <Route path="/edit-class/:classId" element={<CreateClass />} />
       <Route path="/manage-coaches" element={<ManageCoaches />} />
       <Route path="/create-coach" element={<CreateCoach />} />
       <Route path="/manage-users" element={<AdminUsersList />} />
