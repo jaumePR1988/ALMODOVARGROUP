@@ -14,11 +14,12 @@ import {
     Home,
     Plus,
     Users,
-    MessageSquare
+    MessageSquare,
+    LogOut
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
-import { auth } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from './firebase'; // Ensure db is imported if needed, otherwise just auth
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const CoachDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -92,6 +93,15 @@ const CoachDashboard = () => {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            navigate('/');
+        } catch (error) {
+            console.error("Error signing out:", error);
+        }
+    };
+
     // Menu Items for Coach
     const menuItems = [
         { icon: <ClipboardList size={22} />, label: 'Asistencia' },
@@ -121,6 +131,12 @@ const CoachDashboard = () => {
                             className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-colors ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600'}`}
                         >
                             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-colors ${isDarkMode ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white'}`}
+                        >
+                            <LogOut size={20} />
                         </button>
                         <button
                             onClick={() => navigate('/notifications')}

@@ -13,11 +13,13 @@ import {
     Sun,
     Moon,
     Activity,
-    User
+    User,
+    LogOut
 } from 'lucide-react';
 
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 
 const AdminDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -74,6 +76,15 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            navigate('/');
+        } catch (error) {
+            console.error("Error signing out:", error);
+        }
+    };
+
     // Menu Items for Admin
     const menuItems = [
         { icon: <Calendar size={20} />, label: 'Sesión' },
@@ -101,9 +112,15 @@ const AdminDashboard = () => {
                     <div className="flex gap-2">
                         <button
                             onClick={toggleTheme}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center relative shadow-sm transition-colors ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600'}`}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-colors ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600'}`}
                         >
                             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-colors ${isDarkMode ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white'}`}
+                        >
+                            <LogOut size={20} />
                         </button>
                         <button
                             onClick={() => navigate('/notifications')}

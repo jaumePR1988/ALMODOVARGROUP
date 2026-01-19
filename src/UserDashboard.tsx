@@ -11,10 +11,12 @@ import {
   Home,
   Plus,
   User,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 
 const UserDashboard = () => {
   const navigate = useNavigate();
@@ -177,6 +179,15 @@ const UserDashboard = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/');
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   // Placeholder Menu Items for User
   const menuItems = [
     { icon: <Activity size={20} />, label: 'Entrenar' },
@@ -206,6 +217,12 @@ const UserDashboard = () => {
               className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600 border border-gray-100'}`}
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            <button
+              onClick={handleLogout}
+              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100'}`}
+            >
+              <LogOut size={20} />
             </button>
             <button
               onClick={() => navigate('/notifications')}
