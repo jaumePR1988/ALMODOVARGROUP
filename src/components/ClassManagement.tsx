@@ -14,9 +14,9 @@ import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase
 const ClassManagement = () => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-    const [selectedDate, setSelectedDate] = useState(new Date().getDate());
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [classList, setClassList] = useState<any[]>([]);
-    const [weekDays, setWeekDays] = useState<{ day: string; date: number; active: boolean }[]>([]);
+    const [weekDays, setWeekDays] = useState<{ day: string; date: number; fullDate: string; active: boolean }[]>([]);
     const [classToDelete, setClassToDelete] = useState<string | null>(null);
 
     // Sync with global theme
@@ -43,12 +43,13 @@ const ClassManagement = () => {
             return {
                 day: days[d.getDay()],
                 date: d.getDate(),
+                fullDate: d.toISOString().split('T')[0],
                 active: i === 0
             };
         });
 
         setWeekDays(generatedWeek);
-        setSelectedDate(today.getDate());
+        setSelectedDate(today.toISOString().split('T')[0]);
     }, []);
 
     // Fetch classes from Firestore
@@ -100,11 +101,11 @@ const ClassManagement = () => {
                     {weekDays.map((d, idx) => (
                         <button
                             key={idx}
-                            onClick={() => setSelectedDate(d.date)}
+                            onClick={() => setSelectedDate(d.fullDate)}
                             className="flex-shrink-0 flex flex-col items-center gap-2 transition-all group"
                         >
-                            <span className={`text-[10px] font-black tracking-widest ${selectedDate === d.date ? 'text-[#FF1F40]' : 'text-gray-500'}`}>{d.day}</span>
-                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg transition-all ${selectedDate === d.date
+                            <span className={`text-[10px] font-black tracking-widest ${selectedDate === d.fullDate ? 'text-[#FF1F40]' : 'text-gray-500'}`}>{d.day}</span>
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg transition-all ${selectedDate === d.fullDate
                                 ? 'bg-[#FF1F40] text-white shadow-[0_8px_20px_rgba(255,31,64,0.4)] scale-110'
                                 : (isDarkMode ? 'bg-[#2A2D3A] text-gray-400 hover:bg-[#323645]' : 'bg-white text-gray-600 hover:bg-white shadow-md border border-gray-100')
                                 }`}>
@@ -117,18 +118,18 @@ const ClassManagement = () => {
                 {/* Section Title */}
                 <div className="flex justify-between items-end pt-2">
                     <h2 className={`text-xl font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Lista de Clases</h2>
-                    <span className="text-[10px] font-black text-[#FF1F40] bg-[#FF1F40]/10 px-3 py-1.5 rounded-full uppercase tracking-wider">{classList.length} clases</span>
+                    <span className="text-[10px] font-black text-[#FF1F40] bg-[#FF1F40]/10 px-3 py-1.5 rounded-full uppercase tracking-wider">{classList.filter(c => c.date === selectedDate).length} clases</span>
                 </div>
 
                 {/* Classes List */}
                 <div className="space-y-4">
-                    {classList.length === 0 ? (
+                    {classList.filter(c => c.date === selectedDate).length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 opacity-40">
                             <CalendarIcon size={48} className="mb-4" />
                             <p className="text-sm font-bold uppercase tracking-widest text-center">No hay clases programadas</p>
                         </div>
                     ) : (
-                        classList.map((clase) => (
+                        classList.filter(c => c.date === selectedDate).map((clase) => (
                             <div
                                 key={clase.id}
                                 className={`p-5 rounded-[2rem] flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
