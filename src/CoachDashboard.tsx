@@ -201,9 +201,8 @@ const CoachDashboard = () => {
 
                 {/* Agenda Section */}
                 <section className="space-y-4">
-                    <div className="flex justify-between items-end mb-2">
+                    <div className="flex items-end mb-2">
                         <h2 className="text-xl font-bold dark:text-white italic uppercase tracking-tighter">Agenda de hoy</h2>
-                        <a href="#" className="text-xs font-black text-[#FF1F40] tracking-widest hover:underline uppercase">Completa</a>
                     </div>
 
                     {assignedClasses.length === 0 ? (
