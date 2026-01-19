@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon, Phone, Calendar, MapPin, CheckCircle, User } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, UserPlus, LogIn, Sun, Moon, Loader2, Phone, Calendar } from 'lucide-react';
+import { auth, db } from '../firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 interface LoginProps {
     onLogin: () => void;
@@ -12,6 +15,16 @@ const Login = ({ onLogin }: LoginProps) => {
     const [showTerms, setShowTerms] = useState(false);
     const [showHelp, setShowHelp] = useState(false);
 
+    // Auth State
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [birthDate, setBirthDate] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const toggleTheme = () => {
         const newMode = !isDarkMode;
         setIsDarkMode(newMode);
@@ -22,108 +35,194 @@ const Login = ({ onLogin }: LoginProps) => {
         }
     };
 
+    const handleAuth = async () => {
+        if (!email || !password) {
+            setError('Por favor, rellena todos los campos.');
+            return;
+        }
+
+        setError(null);
+        setIsLoading(true);
+
+        try {
+            if (activeTab === 'login') {
+                await signInWithEmailAndPassword(auth, email, password);
+                onLogin();
+            } else {
+                if (!name || !lastName) {
+                    setError('Nombre y apellidos son obligatorios.');
+                    setIsLoading(false);
+                    return;
+                }
+
+                const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+                const user = userCredential.user;
+
+                // Bootstrap Admin Logic
+                const isBootstrapAdmin = email.toLowerCase() === 'admin@almodovar.com';
+
+                // Create Firestore Document
+                await setDoc(doc(db, 'users', user.uid), {
+                    uid: user.uid,
+                    name: `${name} ${lastName}`,
+                    email: email.toLowerCase(),
+                    phone: phone,
+                    birthDate: birthDate,
+                    role: isBootstrapAdmin ? 'admin' : 'client',
+                    status: isBootstrapAdmin ? 'active' : 'pending',
+                    isApproved: isBootstrapAdmin,
+                    plan: null,
+                    group: null,
+                    createdAt: serverTimestamp()
+                });
+
+                await updateProfile(user, {
+                    displayName: `${name} ${lastName}`
+                });
+
+                onLogin();
+            }
+        } catch (err: any) {
+            console.error(err);
+            let msg = 'Error de autenticación.';
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                msg = 'Usuario o contraseña incorrectos.';
+            } else if (err.code === 'auth/email-already-in-use') {
+                msg = 'Este correo ya está registrado.';
+            } else if (err.code === 'auth/weak-password') {
+                msg = 'La contraseña debe tener al menos 6 caracteres.';
+            } else if (err.code === 'auth/invalid-email') {
+                msg = 'El formato del email no es válido.';
+            }
+            setError(msg);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className={`min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-50'}`}>
 
-            {/* Modal de Términos y Condiciones */}
+            {/* Modal de Términos */}
             {showTerms && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className={`w-full max-w-lg max-h-[80vh] flex flex-col rounded-[2rem] shadow-2xl animate-in zoom-in duration-300 ${isDarkMode ? 'bg-[#2A2D3A] border border-white/10' : 'bg-white border border-gray-100'}`}>
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className={`w-full max-w-2xl flex flex-col rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A] border border-white/10 text-white' : 'bg-white border border-gray-100 text-gray-900'}`}>
                         <div className="p-8 border-b border-white/5 flex justify-between items-center">
-                            <h3 className={`text-xl font-black uppercase tracking-tight italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                Términos y <span className="text-[#FF1F40]">Condiciones</span>
-                            </h3>
-                            <button
-                                onClick={() => setShowTerms(false)}
-                                className="w-10 h-10 rounded-full bg-red-500/10 text-[#FF1F40] flex items-center justify-center hover:bg-red-500/20 transition-colors"
-                            >
-                                ✕
+                            <h3 className="text-xl font-black uppercase italic tracking-tight">Términos y <span className="text-[#FF1F40]">Condiciones</span></h3>
+                            <button onClick={() => setShowTerms(false)} className="text-gray-500 hover:text-[#FF1F40] transition-colors">
+                                <LogIn size={20} className="rotate-45" />
+                            </button>
+                        </div>
+                        <div className="p-8 overflow-y-auto max-h-[60vh] custom-scrollbar text-sm space-y-6 leading-relaxed opacity-90">
+                            <section>
+                                <h4 className="font-black text-[#FF1F40] uppercase mb-2">1) Responsable del tratamiento</h4>
+                                <p><strong>Responsable:</strong> Jesús Almodóvar<br />
+                                    <strong>Domicilio:</strong> Av. dels Rabassaires, 30 – 2ª planta, 08100 Mollet del Vallès (Barcelona)<br />
+                                    <strong>Web:</strong> www.almodovargroup.es<br />
+                                    <strong>Correo:</strong> almodovarbox@gmail.com<br />
+                                    <strong>Teléfono:</strong> 662 086 632</p>
+                                <p className="mt-2 text-xs">“Almodóvar Group” hace referencia al conjunto de servicios ofrecidos bajo las líneas Almodóvar Fit y Almodóvar Box.</p>
+                            </section>
+
+                            <section>
+                                <h4 className="font-black text-[#FF1F40] uppercase mb-2">2) Finalidad y Conservación</h4>
+                                <p>Gestión integral de la relación con clientes (altas, reservas, facturación, atención al cliente, comunicaciones). No se toman decisiones automatizadas. Los datos se conservarán mientras exista relación comercial y por los plazos legales establecidos.</p>
+                            </section>
+
+                            <section>
+                                <h4 className="font-black text-[#FF1F40] uppercase mb-2">3) Destinatarios y Derechos</h4>
+                                <p>No se realizan cesiones no necesarias para el servicio, salvo obligaciones legales. Puede ejercer sus derechos de acceso, rectificación, supresión y otros en almodovarbox@gmail.com.</p>
+                            </section>
+
+                            <section>
+                                <h4 className="font-black text-[#FF1F40] uppercase mb-2">4) Uso de la APP</h4>
+                                <p>El acceso implica la aceptación de estas condiciones. Usuario declara ser mayor de 18 años o estar bajo supervisión legal. Debe custodiar su contraseña.</p>
+                            </section>
+
+                            <section>
+                                <h4 className="font-black text-[#FF1F40] uppercase mb-2">5) Condiciones Comerciales</h4>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li><strong>Almodóvar Box:</strong> 2 ses/sem (105€/mes), 3 ses/sem (159,90€/mes). Matrícula 59,90€.</li>
+                                    <li><strong>Almodóvar Fit:</strong> 2 ses/sem (54,90€/mes), 3 ses/sem (74,90€/mes). Matrícula 59,90€.</li>
+                                </ul>
+                                <p className={`mt-2 text-xs font-bold ${isDarkMode ? 'text-yellow-500' : 'text-red-600'}`}>Importante: Suscripción mensual no acumulable. Bajas requieren 3 meses de espera o matrícula de 150€ para re-alta.</p>
+                            </section>
+
+                            <section>
+                                <h4 className="font-black text-[#FF1F40] uppercase mb-2">6) Normas de Instalaciones</h4>
+                                <p>Uso respetuoso, limpieza del material, toalla y calzado adecuado obligatorio. Prohibido fumar o sustancias. Conductas agresivas implican expulsión inmediata.</p>
+                            </section>
+                        </div>
+                        <div className="p-6 bg-black/10">
+                            <button onClick={() => setShowTerms(false)} className="w-full bg-[#FF1F40] py-4 rounded-2xl text-white font-black uppercase tracking-widest shadow-xl shadow-red-900/20 active:scale-95 transition-all">Aceptar y Continuar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Ayuda / FAQ */}
+            {showHelp && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className={`w-full max-w-lg flex flex-col rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A] border border-white/10 text-white' : 'bg-white border border-gray-100 text-gray-900'}`}>
+                        {/* Header Ayuda */}
+                        <div className="p-8 border-b border-white/5 bg-[#FF1F40]/5 flex justify-between items-center shrink-0">
+                            <div>
+                                <h3 className="text-xl font-black uppercase italic tracking-tight">Preguntas <span className="text-[#FF1F40]">Frecuentes</span></h3>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Centro de ayuda Almodóvar Group</p>
+                            </div>
+                            <button onClick={() => setShowHelp(false)} className="text-gray-500 hover:text-[#FF1F40] transition-colors">
+                                <LogIn size={20} className="rotate-45" />
                             </button>
                         </div>
 
-                        <div className={`p-8 overflow-y-auto scrollbar-hide text-sm leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                            <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
-                            <div className="space-y-6">
-                                <p className="font-bold text-[#FF1F40]">Almodóvar Group (integrado por Almodóvar Fit y Almodóvar Box)</p>
+                        {/* Contenido Ayuda */}
+                        <div className="p-8 overflow-y-auto max-h-[60vh] custom-scrollbar space-y-6">
+                            {/* FAQs */}
+                            <div className="space-y-4">
+                                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                                    <h4 className="font-black text-xs uppercase text-[#FF1F40] mb-2 tracking-tight">¿Cómo reservo una clase?</h4>
+                                    <p className="text-xs leading-relaxed opacity-70 font-medium">Una vez autorizado tu perfil por el administrador, podrás ver el calendario y reservar tu plaza en el menú de "WOD / Reservas".</p>
+                                </div>
+                                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                                    <h4 className="font-black text-xs uppercase text-[#FF1F40] mb-2 tracking-tight">¿Mi perfil no ha sido autorizado?</h4>
+                                    <p className="text-xs leading-relaxed opacity-70 font-medium">La validación suele realizarse en un plazo de 24 horas. Si pasado este tiempo sigues sin acceso, por favor comunícate mediante teléfono o WhatsApp.</p>
+                                </div>
+                                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                                    <h4 className="font-black text-xs uppercase text-[#FF1F40] mb-2 tracking-tight">¿Cómo cambio mi contraseña?</h4>
+                                    <p className="text-xs leading-relaxed opacity-70 font-medium">Puedes solicitar un enlace de recuperación en la pantalla de inicio o cambiarla desde tu "Perfil" una vez dentro de la APP.</p>
+                                </div>
+                            </div>
 
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>1) Información del responsable del tratamiento</h4>
-                                    <p>Responsable: Jesús Almodóvar<br />
-                                        Domicilio: Av. dels Rabassaires, 30 – 2ª planta, 08100 Mollet del Vallès (Barcelona)<br />
-                                        Web: www.almodovargroup.es<br />
-                                        Correo de contacto: almodovarbox@gmail.com<br />
-                                        Teléfono: 662 086 632</p>
-                                    <p className="mt-2 text-xs italic opacity-70">En este documento, “Almodóvar Group” hace referencia al conjunto de servicios ofrecidos bajo las líneas Almodóvar Fit y Almodóvar Box.</p>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>2) Finalidad, legitimación y conservación de los datos</h4>
-                                    <p>Finalidad: gestión integral de la relación con clientes y personas interesadas (altas, reservas, facturación, atención al cliente, comunicaciones informativas y operativas). No se toman decisiones automatizadas.</p>
-                                    <p className="mt-2 italic">Base jurídica:</p>
-                                    <ul className="list-disc pl-4 space-y-1">
-                                        <li>Ejecución de contrato/solicitud del cliente (prestación de servicios de salud y bienestar).</li>
-                                        <li>Consentimiento expreso del interesado para comunicaciones.</li>
-                                    </ul>
-                                    <p className="mt-2">Conservación: mientras exista relación comercial y, posteriormente, durante los plazos legalmente establecidos.</p>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>3) Destinatarios y procedencia de los datos</h4>
-                                    <p>Cesiones previstas: gestorías, entidades de crédito y organismos públicos cuando resulte necesario para obligaciones contables, fiscales o legales de clientes empresa.</p>
-                                    <p className="mt-2">Usuarios de la plataforma/centro: no se realizan cesiones no necesarias para la prestación del servicio.</p>
-                                    <p className="mt-2">Procedencia: datos facilitados por el propio interesado.</p>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>4) Derechos de las personas</h4>
-                                    <p>Puede ejercer acceso, rectificación, supresión, oposición, limitación y portabilidad, así como retirar el consentimiento, escribiendo a almodovarbox@gmail.com.</p>
-                                    <p className="mt-2">Tiene derecho a reclamar ante la autoridad de control competente.</p>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>5) Información sobre el uso de la APP</h4>
-                                    <p>El acceso y navegación por la APP Almodóvar Box implican la aceptación de estas condiciones.</p>
-                                    <p className={`mt-2 font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Requisitos de uso: El usuario declara ser mayor de 18 años o estar supervisado por tutores legales. Deberá custodiar su contraseña y notificar usos no autorizados.</p>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>6) Condiciones comerciales y de suscripción</h4>
-                                    <p><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Almodóvar Box:</span> Entrenamiento funcional híbrido. 2 sesiones/semana (105€/mes), 3 sesiones/semana (159,90€/mes). Matrícula 59,90€.</p>
-                                    <p className="mt-2"><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Almodóvar Fit:</span> Sesiones colectivas. 2 sesiones/semana (54,90€/mes), 3 sesiones/semana (74,90€/mes). Matrícula 59,90€.</p>
-                                    <p className="mt-2 text-[#FF1F40] font-bold italic underline">Importante: Suscripción mensual no acumulable. Bajas voluntarias requieren 3 meses de espera o matrícula de 150€ para re-alta.</p>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>7) Normas de uso de las instalaciones</h4>
-                                    <ul className="list-disc pl-4 space-y-1">
-                                        <li>Uso respetuoso y limpieza del material.</li>
-                                        <li>Obligatorio toalla, ropa y calzado deportivo adecuado.</li>
-                                        <li>Prohibido fumar, alcohol o sustancias estupefacientes.</li>
-                                        <li>Conductas agresivas implican expulsión inmediata y baja definitiva.</li>
-                                    </ul>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>8) Responsabilidad y garantías – salud</h4>
-                                    <p>El usuario es responsable de su estado de salud y del uso adecuado de los servicios. Se recomienda consultar a un especialista en caso de patologías.</p>
-                                </section>
-
-                                <section>
-                                    <h4 className={`font-black uppercase text-xs tracking-widest mb-2 italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>10) Política de cookies (resumen)</h4>
-                                    <p>Se emplean cookies técnicas y de terceros para análisis de uso. El usuario puede configurar su navegador para aceptar, rechazar o eliminar cookies.</p>
-                                </section>
-
-                                <p className={`text-xs pt-4 border-t italic ${isDarkMode ? 'border-white/5 text-gray-500' : 'border-gray-100 text-gray-400'}`}>Para la resolución de conflictos, las partes se someten a los juzgados y tribunales del domicilio del usuario bajo la ley española.</p>
+                            {/* Soporte Directo */}
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4 text-center">Soporte Directo</h4>
+                                <div className="grid grid-cols-2 gap-3 mb-6">
+                                    <a href="https://wa.me/34662086632" target="_blank" rel="noreferrer" className={`flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-[#1F2128] border-white/5 hover:border-green-500/50' : 'bg-gray-50 border-gray-100 hover:border-green-500/30'}`}>
+                                        <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-900/20"><Phone size={18} /></div>
+                                        <div className="text-center">
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-0.5">WhatsApp</p>
+                                            <p className="font-bold text-xs italic">662 086 632</p>
+                                        </div>
+                                    </a>
+                                    <a href="mailto:almodovarbox@gmail.com" className={`flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all ${isDarkMode ? 'bg-[#1F2128] border-white/5 hover:border-[#FF1F40]/50' : 'bg-gray-50 border-gray-100 hover:border-[#FF1F40]/30'}`}>
+                                        <div className="w-10 h-10 bg-[#FF1F40] rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-900/20"><Mail size={18} /></div>
+                                        <div className="text-center">
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-0.5">Email</p>
+                                            <p className="font-bold text-xs italic">Soporte App</p>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div className={`p-4 rounded-2xl text-center border border-dashed ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">
+                                        Horario de atención:<br />
+                                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>Lunes a Viernes de 09:00 a 21:00</span>
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="p-6">
-                            <button
-                                onClick={() => setShowTerms(false)}
-                                className="w-full bg-[#FF1F40] py-4 rounded-2xl text-white font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all"
-                            >
-                                Entendido
-                            </button>
+                        <div className="p-6 bg-black/10 shrink-0">
+                            <button onClick={() => setShowHelp(false)} className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'}`}>Cerrar Centro de Ayuda</button>
                         </div>
                     </div>
                 </div>
@@ -139,97 +238,10 @@ const Login = ({ onLogin }: LoginProps) => {
                 </button>
             </div>
 
-            {/* Modal de Centro de Ayuda */}
-            {showHelp && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className={`w-full max-w-lg max-h-[85vh] flex flex-col rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 ${isDarkMode ? 'bg-[#1a1c22] border border-white/10' : 'bg-white border border-gray-100'}`}>
-                        <div className={`p-8 border-b flex justify-between items-center ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
-                            <h3 className={`text-1xl font-black uppercase tracking-tight italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                Centro de <span className="text-[#FF1F40]">Ayuda</span>
-                            </h3>
-                            <button
-                                onClick={() => setShowHelp(false)}
-                                className="w-10 h-10 rounded-full bg-red-500/10 text-[#FF1F40] flex items-center justify-center hover:bg-red-500/20 transition-colors"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className={`p-8 overflow-y-auto scrollbar-hide text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                            <div className="space-y-8">
-                                <section>
-                                    <h4 className="text-[#FF1F40] font-black uppercase text-xs tracking-widest mb-6 italic">Preguntas Frecuentes</h4>
-
-                                    <div className="space-y-6">
-                                        <div>
-                                            <p className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Cómo reservo una clase?</p>
-                                            <p>Una vez autorizado tu perfil por el administrador, podrás ver el calendario y reservar tu plaza en el menú de "WOD / Reservas".</p>
-                                        </div>
-
-                                        <div>
-                                            <p className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Mi perfil no ha sido autorizado?</p>
-                                            <p>La validación suele realizarse en un plazo de 24 horas. Si pasado este tiempo sigues sin acceso, por favor <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>comunícate mediante teléfono o WhatsApp.</span></p>
-                                        </div>
-
-                                        <div>
-                                            <p className={`font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Cómo cambio mi contraseña?</p>
-                                            <p>Puedes solicitar un enlace de recuperación en la pantalla de inicio o cambiarla desde tu "Perfil" una vez dentro de la APP.</p>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <div className={`border-t ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}></div>
-
-                                <section>
-                                    <h4 className="text-[#FF1F40] font-black uppercase text-xs tracking-widest mb-6 italic">Soporte Directo</h4>
-
-                                    <div className="space-y-4">
-                                        <div className="flex items-start gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
-                                                <Mail className="text-[#FF1F40]" size={20} />
-                                            </div>
-                                            <div>
-                                                <p className={`font-bold text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Teléfono / WhatsApp:</p>
-                                                <p className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>662 086 632</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-start gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
-                                                <Mail className="text-[#FF1F40]" size={20} />
-                                            </div>
-                                            <div>
-                                                <p className={`font-bold text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Email:</p>
-                                                <p className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>almodovarbox@gmail.com</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <p className="mt-8 text-xs italic opacity-70 border-t pt-4 border-white/5">Horario de atención: Lunes a Viernes de 09:00 a 21:00.</p>
-                                </section>
-                            </div>
-                        </div>
-
-                        <div className="p-6">
-                            <button
-                                onClick={() => setShowHelp(false)}
-                                className="w-full bg-[#FF1F40] py-4 rounded-2xl text-white font-black uppercase tracking-wider shadow-lg active:scale-95 transition-all"
-                            >
-                                Cerrar Centro de Ayuda
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Brand Header */}
             <div className="flex flex-col items-center mb-10 text-center animate-in fade-in zoom-in duration-700">
                 <div className="relative w-32 h-32 bg-white rounded-full flex items-center justify-center border-2 border-[#FF1F40]/50 shadow-[0_0_50px_rgba(255,31,64,0.3)] overflow-hidden mb-6">
-                    <img
-                        src="/logo.png"
-                        alt="Almodovar Group Logo"
-                        className="w-full h-full object-cover scale-[1.02]"
-                    />
+                    <img src="/logo.png" alt="Almodovar Group Logo" className="w-full h-full object-cover scale-[1.02]" />
                 </div>
                 <h1 className={`text-3xl font-black tracking-tighter uppercase italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     Almodovar <span className="text-[#FF1F40]">Group</span>
@@ -252,7 +264,7 @@ const Login = ({ onLogin }: LoginProps) => {
                             }`}
                     >
                         <LogIn size={18} />
-                        Iniciar Sesión
+                        Acceder
                     </button>
                     <button
                         onClick={() => setActiveTab('register')}
@@ -262,13 +274,19 @@ const Login = ({ onLogin }: LoginProps) => {
                             }`}
                     >
                         <UserPlus size={18} />
-                        Registrarse
+                        Unirse
                     </button>
                 </div>
 
                 {/* Form Container */}
                 <div className="space-y-6 max-h-[60vh] overflow-y-auto scrollbar-hide pr-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                    <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
+
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top">
+                            <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white shrink-0 font-bold text-[10px]">!</div>
+                            <p className="text-red-500 text-xs font-bold leading-tight">{error}</p>
+                        </div>
+                    )}
 
                     {activeTab === 'login' ? (
                         <div className="space-y-4">
@@ -279,7 +297,9 @@ const Login = ({ onLogin }: LoginProps) => {
                                 </div>
                                 <input
                                     type="email"
-                                    placeholder="ejemplo@correo.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Email"
                                     className={`w-full py-4 pl-12 pr-4 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
                                         ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
                                         : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
@@ -293,7 +313,9 @@ const Login = ({ onLogin }: LoginProps) => {
                                 </div>
                                 <input
                                     type={showPassword ? 'text' : 'password'}
-                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Password"
                                     className={`w-full py-4 pl-12 pr-12 rounded-2xl font-medium outline-none transition-all border-2 ${isDarkMode
                                         ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white'
                                         : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'
@@ -306,89 +328,66 @@ const Login = ({ onLogin }: LoginProps) => {
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
-
-                            <div className="text-right">
-                                <button className="text-[11px] font-bold text-[#FF1F40] hover:underline uppercase tracking-tight">
-                                    ¿Olvidaste tu contraseña?
-                                </button>
-                            </div>
                         </div>
                     ) : (
-                        <div className="space-y-6 animate-in fade-in duration-500">
+                        <div className="space-y-4 animate-in fade-in duration-500">
                             {/* Registration Fields */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nombre *</label>
-                                    <div className="relative group">
-                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
-                                        <input placeholder="Juan" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Apellidos *</label>
-                                    <input placeholder="Pérez" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Nombre"
+                                    className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`}
+                                />
+                                <input
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    placeholder="Apellidos"
+                                    className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`}
+                                />
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Teléfono *</label>
-                                    <div className="relative group">
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
-                                        <input placeholder="600 000 000" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>F. Nacimiento</label>
-                                    <div className="relative group">
-                                        <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40] pointer-events-none" size={16} />
-                                        <input type="date" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4 pt-2 border-t border-white/5">
-                                <label className={`text-[10px] font-black uppercase tracking-[0.2em] text-[#FF1F40]`}>Dirección Completa *</label>
+                            <div className="grid grid-cols-2 gap-3">
                                 <div className="relative group">
-                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
-                                    <input placeholder="Calle / Avenida" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                    <input
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        placeholder="Teléfono"
+                                        className={`w-full py-4 pl-10 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`}
+                                    />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <input placeholder="Nº" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                    <input placeholder="Código Postal" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                </div>
-                                <input placeholder="Ciudad" className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                            </div>
-
-                            <div className="space-y-2 pt-2 border-t border-white/5">
-                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Correo Electrónico *</label>
                                 <div className="relative group">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
-                                    <input placeholder="ejemplo@correo.com" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
+                                    <input
+                                        type="date"
+                                        value={birthDate}
+                                        onChange={(e) => setBirthDate(e.target.value)}
+                                        className={`w-full py-4 pl-10 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`}
+                                    />
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Contraseña *</label>
-                                    <div className="relative group">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
-                                        <input type="password" placeholder="••••••••" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Confirmar *</label>
-                                    <div className="relative group">
-                                        <CheckCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#FF1F40]" size={16} />
-                                        <input type="password" placeholder="••••••••" className={`w-full py-4 pl-11 pr-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`} />
-                                    </div>
-                                </div>
-                            </div>
+                            {/* Email and Password for Register */}
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Email"
+                                className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`}
+                            />
 
-                            <div className="flex items-center gap-3 py-2">
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Contraseña (mín. 6 car.)"
+                                className={`w-full py-4 px-4 rounded-2xl text-sm font-medium outline-none border-2 ${isDarkMode ? 'bg-[#1F2128] border-transparent focus:border-[#FF1F40]/50 text-white' : 'bg-gray-100 border-transparent focus:border-[#FF1F40]/30 text-gray-900'}`}
+                            />
+
+                            <div className="flex items-center gap-3 py-2 px-1">
                                 <input type="checkbox" className="w-5 h-5 accent-[#FF1F40]" />
-                                <p className={`text-[11px] font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    Acepto los <button onClick={() => setShowTerms(true)} className="text-[#FF1F40] hover:underline">términos</button> y la <button className="text-[#FF1F40] hover:underline">política de privacidad</button>
+                                <p className={`text-[10px] font-medium leading-tight ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Acepto los <button onClick={() => setShowTerms(true)} className="text-[#FF1F40] font-bold">términos</button> y la <button className="text-[#FF1F40] font-bold">política de privacidad</button>
                                 </p>
                             </div>
                         </div>
@@ -397,33 +396,30 @@ const Login = ({ onLogin }: LoginProps) => {
 
                 {/* Action Button */}
                 <button
-                    onClick={onLogin}
-                    className="w-full bg-[#FF1F40] py-5 rounded-2xl text-white font-black uppercase tracking-wider shadow-xl shadow-red-900/20 active:scale-95 transition-all mt-8"
+                    onClick={handleAuth}
+                    disabled={isLoading}
+                    className="w-full bg-[#FF1F40] py-5 rounded-2xl text-white font-black uppercase tracking-widest shadow-xl shadow-red-900/20 active:scale-95 transition-all mt-8 flex items-center justify-center gap-2"
                 >
-                    {activeTab === 'login' ? 'Acceso Clientes' : 'Crear Cuenta'}
+                    {isLoading ? <Loader2 className="animate-spin" /> : (activeTab === 'login' ? 'Iniciar Sesión' : 'Registrarse Ahora')}
                 </button>
 
             </div>
 
             {/* Footer Links */}
-            <div className="mt-12 flex gap-6 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+            <div className="mt-8 flex items-center justify-center gap-6 animate-in fade-in slide-in-from-bottom duration-1000 delay-500">
                 <button
                     onClick={() => setShowTerms(true)}
-                    className="hover:text-[#FF1F40] transition-colors"
+                    className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-[#FF1F40] transition-colors"
                 >
-                    Términos y Privacidad
+                    Términos y Condiciones
                 </button>
-                <span className="opacity-30">|</span>
+                <div className="w-1 h-1 bg-gray-500/20 rounded-full"></div>
                 <button
                     onClick={() => setShowHelp(true)}
-                    className="hover:text-[#FF1F40] transition-colors"
+                    className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-[#FF1F40] transition-colors"
                 >
                     Ayuda
                 </button>
-            </div>
-
-            <div className="mt-8 italic opacity-40">
-                <span className="text-[9px] text-gray-700 font-bold">© 2025 Almodovar Group Fitness • v2.0 STRICT</span>
             </div>
 
         </div>

@@ -21,7 +21,9 @@ const UserDashboard = () => {
   // 1. Configuración General: Dark Mode by default
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [showMenu, setShowMenu] = useState(false);
-  const [weekDays, setWeekDays] = useState<{ day: string; date: string; active: boolean }[]>([]);
+  const [weekDays, setWeekDays] = useState<{ day: string; date: string; fullDate: string; active: boolean }[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<'box' | 'fit'>('box');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().getDate().toString());
   const [classList, setClassList] = useState<any[]>([]);
   const [nextClass, setNextClass] = useState<any>(null);
   const [userReservations, setUserReservations] = useState<string[]>([]);
@@ -54,23 +56,36 @@ const UserDashboard = () => {
       return {
         day: dayName,
         date: d.getDate().toString(),
-        active: i === 0 // Today (first item) is always active
+        fullDate: d.toISOString().split('T')[0],
+        active: d.getDate().toString() === selectedDate
       };
     });
 
     setWeekDays(generatedWeek);
-  }, []);
+  }, [selectedDate]);
 
   // Fetch classes for Agenda
   useEffect(() => {
-    const q = query(collection(db, 'classes'), orderBy('startTime', 'asc'));
+    // Filter by group in query
+    const q = query(
+      collection(db, 'classes'),
+      where('group', '==', selectedGroup),
+      orderBy('startTime', 'asc')
+    );
+
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       let classesData: any[] = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
 
-      // Fallback to mock data (as per user request)
+      // Filter real data by selected date
+      const activeDay = weekDays.find(d => d.date === selectedDate);
+      if (activeDay) {
+        classesData = classesData.filter(c => c.date === activeDay.fullDate);
+      }
+
+      // Fallback to mock data if empty (just to show something)
       if (classesData.length === 0) {
         classesData = [
           {
@@ -78,6 +93,7 @@ const UserDashboard = () => {
             name: 'Cross Training WOD',
             startTime: '09:00',
             group: 'fit',
+            date: new Date().toISOString().split('T')[0],
             currentCapacity: 7,
             maxCapacity: 15,
             coachId: 'coach-marc'
@@ -87,17 +103,27 @@ const UserDashboard = () => {
             name: 'Open Box Free',
             startTime: '11:30',
             group: 'box',
+            date: new Date().toISOString().split('T')[0],
             currentCapacity: 3,
             maxCapacity: 20,
             coachId: 'coach-marc'
           }
         ];
+
+        // Filter mock data by selected group and date
+        classesData = classesData.filter(c =>
+          c.group === selectedGroup &&
+          (!activeDay || c.date === activeDay.fullDate)
+        );
       }
 
       setClassList(classesData);
+    }, (error) => {
+      console.error("Firestore error in UserDashboard:", error);
+      // If index is missing, it will log here
     });
     return () => unsubscribe();
-  }, []);
+  }, [selectedGroup, selectedDate, weekDays]);
 
   // Fetch user reservations
   useEffect(() => {
@@ -212,6 +238,7 @@ const UserDashboard = () => {
             {weekDays.map((day, idx) => (
               <div
                 key={idx}
+                onClick={() => setSelectedDate(day.date)}
                 className={`
                   flex-shrink-0 flex flex-col items-center justify-center w-14 h-20 rounded-2xl transition-all cursor-pointer
                   ${day.active
@@ -236,7 +263,7 @@ const UserDashboard = () => {
           {nextClass ? (
             <div className="relative w-full h-56 rounded-3xl overflow-hidden shadow-lg group">
               <img
-                src="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop"
+                src={nextClass.imageUrl || "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop"}
                 className="absolute inset-0 w-full h-full object-cover grayscale-[30%]"
                 alt="Next Class"
               />
@@ -271,7 +298,10 @@ const UserDashboard = () => {
         <section>
           <h2 className="text-xl font-bold mb-4 dark:text-white">Reservar nueva sesión</h2>
           <div className="grid grid-cols-2 gap-4">
-            <button className="relative h-32 rounded-3xl overflow-hidden shadow-md group">
+            <button
+              onClick={() => setSelectedGroup('box')}
+              className={`relative h-32 rounded-3xl overflow-hidden shadow-md group transition-all ${selectedGroup === 'box' ? 'ring-4 ring-[#FF1F40]' : ''}`}
+            >
               <img
                 src="https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=400&auto=format&fit=crop"
                 className="absolute inset-0 w-full h-full object-cover brightness-[0.4] group-hover:scale-110 transition-transform duration-500"
@@ -283,7 +313,10 @@ const UserDashboard = () => {
               </div>
             </button>
 
-            <button className="relative h-32 rounded-3xl overflow-hidden shadow-md group border border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setSelectedGroup('fit')}
+              className={`relative h-32 rounded-3xl overflow-hidden shadow-md group border border-gray-200 dark:border-gray-700 transition-all ${selectedGroup === 'fit' ? 'ring-4 ring-[#FF1F40]' : ''}`}
+            >
               <img
                 src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&auto=format&fit=crop"
                 className="absolute inset-0 w-full h-full object-cover brightness-[0.4] group-hover:scale-110 transition-transform duration-500"

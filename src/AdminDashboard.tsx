@@ -16,9 +16,13 @@ import {
     User
 } from 'lucide-react';
 
+import { db } from './firebase';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+
 const AdminDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
     const [showMenu, setShowMenu] = useState(false);
+    const [stats, setStats] = useState({ activeUsers: 142, todayClasses: 0, pendingUsers: 0 });
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -31,6 +35,33 @@ const AdminDashboard = () => {
         });
         observer.observe(document.documentElement, { attributes: true });
         return () => observer.disconnect();
+    }, []);
+
+    // Fetch Stats
+    useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const classesQuery = query(collection(db, 'classes'), where('date', '==', today));
+
+        const unsubscribeClasses = onSnapshot(classesQuery, (snapshot) => {
+            setStats(prev => ({ ...prev, todayClasses: snapshot.size }));
+        });
+
+        // Real-time Users Count
+        const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+            const allUsers = snapshot.docs.map(doc => doc.data());
+            const active = allUsers.filter((u: any) => u.isApproved).length;
+            const pending = allUsers.filter((u: any) => !u.isApproved).length;
+            setStats(prev => ({
+                ...prev,
+                activeUsers: active,
+                pendingUsers: pending
+            }));
+        });
+
+        return () => {
+            unsubscribeClasses();
+            unsubscribeUsers();
+        };
     }, []);
 
     const toggleTheme = () => {
@@ -94,7 +125,7 @@ const AdminDashboard = () => {
                             <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-lg">+12%</span>
                         </div>
                         <div>
-                            <span className="text-3xl font-black block">142</span>
+                            <span className="text-3xl font-black block">{stats.activeUsers}</span>
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Usuarios Activos</span>
                         </div>
                     </div>
@@ -106,7 +137,7 @@ const AdminDashboard = () => {
                             <span className={`text-[10px] font-bold bg-gray-400/10 px-2 py-1 rounded-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Hoy</span>
                         </div>
                         <div>
-                            <span className="text-3xl font-black block">8</span>
+                            <span className="text-3xl font-black block">{stats.todayClasses}</span>
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Clases Programadas</span>
                         </div>
                     </div>
@@ -127,9 +158,14 @@ const AdminDashboard = () => {
                         </button>
 
                         <button
-                            onClick={() => navigate('/users')} // Placeholder
-                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                            onClick={() => navigate('/manage-users')}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50 relative overflow-hidden`}
                         >
+                            {stats.pendingUsers > 0 && (
+                                <div className="absolute top-4 right-4 bg-[#FF1F40] text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-bounce z-10">
+                                    {stats.pendingUsers}
+                                </div>
+                            )}
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
                                 <Users size={28} />
                             </div>
@@ -157,7 +193,7 @@ const AdminDashboard = () => {
                         </button>
 
                         <button
-                            onClick={() => navigate('/manage-coaches')} // Placeholder
+                            onClick={() => navigate('/manage-coaches')}
                             className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
                         >
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">

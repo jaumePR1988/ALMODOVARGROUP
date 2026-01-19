@@ -14,9 +14,9 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 const ClassManagement = () => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-    const [view, setView] = useState<'calendar' | 'list'>('list');
     const [selectedDate, setSelectedDate] = useState(new Date().getDate());
     const [classList, setClassList] = useState<any[]>([]);
+    const [weekDays, setWeekDays] = useState<{ day: string; date: number; active: boolean }[]>([]);
 
     // Sync with global theme
     useEffect(() => {
@@ -31,6 +31,25 @@ const ClassManagement = () => {
         return () => observer.disconnect();
     }, []);
 
+    // Generate Rolling 7-Day Window starting Today
+    useEffect(() => {
+        const days = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
+        const today = new Date();
+
+        const generatedWeek = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            return {
+                day: days[d.getDay()],
+                date: d.getDate(),
+                active: i === 0
+            };
+        });
+
+        setWeekDays(generatedWeek);
+        setSelectedDate(today.getDate());
+    }, []);
+
     // Fetch classes from Firestore
     useEffect(() => {
         const q = query(collection(db, 'classes'), orderBy('startTime', 'asc'));
@@ -43,15 +62,6 @@ const ClassManagement = () => {
         });
         return () => unsubscribe();
     }, []);
-
-    const dates = [
-        { day: 'LUN', date: 20 },
-        { day: 'MAR', date: 21 },
-        { day: 'MIE', date: 22 },
-        { day: 'JUE', date: 23 },
-        { day: 'VIE', date: 24 },
-        { day: 'SAB', date: 25 },
-    ];
 
     return (
         <div className={`min-h-screen transition-colors duration-500 pb-40 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
@@ -74,34 +84,16 @@ const ClassManagement = () => {
             </header>
 
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
-                {/* View Switcher */}
-                <div className={`p-1 rounded-2xl flex ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-gray-200'}`}>
-                    <button
-                        onClick={() => setView('calendar')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all font-bold text-sm ${view === 'calendar' ? (isDarkMode ? 'bg-[#323645] text-white shadow-lg' : 'bg-white text-gray-900 shadow-md') : 'text-gray-500'}`}
-                    >
-                        <CalendarIcon size={18} />
-                        Calendario
-                    </button>
-                    <button
-                        onClick={() => setView('list')}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all font-bold text-sm ${view === 'list' ? (isDarkMode ? 'bg-[#323645] text-white shadow-lg' : 'bg-white text-gray-900 shadow-md') : 'text-gray-500'}`}
-                    >
-                        <List size={18} />
-                        Lista
-                    </button>
-                </div>
-
                 {/* Date Picker */}
-                <div className="grid grid-cols-6 gap-2">
-                    {dates.map((d) => (
+                <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                    {weekDays.map((d, idx) => (
                         <button
-                            key={d.date}
+                            key={idx}
                             onClick={() => setSelectedDate(d.date)}
-                            className="flex flex-col items-center gap-2 transition-all group"
+                            className="flex-shrink-0 flex flex-col items-center gap-2 transition-all group"
                         >
                             <span className={`text-[10px] font-black tracking-widest ${selectedDate === d.date ? 'text-[#FF1F40]' : 'text-gray-500'}`}>{d.day}</span>
-                            <div className={`w-full aspect-square max-w-[55px] rounded-2xl flex items-center justify-center font-black text-base transition-all ${selectedDate === d.date
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg transition-all ${selectedDate === d.date
                                 ? 'bg-[#FF1F40] text-white shadow-[0_8px_20px_rgba(255,31,64,0.4)] scale-110'
                                 : (isDarkMode ? 'bg-[#2A2D3A] text-gray-400 hover:bg-[#323645]' : 'bg-white text-gray-600 hover:bg-white shadow-md border border-gray-100')
                                 }`}>
@@ -113,7 +105,7 @@ const ClassManagement = () => {
 
                 {/* Section Title */}
                 <div className="flex justify-between items-end pt-2">
-                    <h2 className={`text-xl font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{view === 'list' ? 'Lista de Clases' : 'Calendario'}</h2>
+                    <h2 className={`text-xl font-black uppercase tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Lista de Clases</h2>
                     <span className="text-[10px] font-black text-[#FF1F40] bg-[#FF1F40]/10 px-3 py-1.5 rounded-full uppercase tracking-wider">{classList.length} clases</span>
                 </div>
 

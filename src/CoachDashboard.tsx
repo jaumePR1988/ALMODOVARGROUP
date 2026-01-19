@@ -43,9 +43,11 @@ const CoachDashboard = () => {
 
     // Fetch assigned classes and calculate stats
     useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
         const q = query(
             collection(db, 'classes'),
             where('coachId', '==', coachId),
+            where('date', '==', today),
             orderBy('startTime', 'asc')
         );
 
@@ -55,30 +57,10 @@ const CoachDashboard = () => {
                 ...doc.data()
             }));
 
-            // Fallback to mock data if empty (as per user request)
-            if (classesData.length === 0) {
-                classesData = [
-                    {
-                        id: 'mock-1',
-                        name: 'Fit Boxing WOD',
-                        startTime: '09:00',
-                        group: 'fit',
-                        currentCapacity: 8,
-                        maxCapacity: 12,
-                        coachId: coachId,
-                        status: 'Próxima'
-                    },
-                    {
-                        id: 'mock-2',
-                        name: 'Open Box',
-                        startTime: '11:30',
-                        group: 'box',
-                        currentCapacity: 4,
-                        maxCapacity: 15,
-                        coachId: coachId,
-                        status: 'Disponible'
-                    }
-                ];
+            // Fallback mock only if real data for TODAY is missing
+            if (classesData.length === 0 && !querySnapshot.metadata.fromCache) {
+                // Keep it empty or add mocks if you prefer, 
+                // but let's trust the new class creation.
             }
 
             setAssignedClasses(classesData);
@@ -92,7 +74,7 @@ const CoachDashboard = () => {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [coachId]);
 
     const toggleTheme = () => {
         const newDarkMode = !isDarkMode;
@@ -174,15 +156,19 @@ const CoachDashboard = () => {
                 {/* Next Class Focus */}
                 <section className="relative h-48 rounded-[2.5rem] overflow-hidden shadow-2xl group active:scale-[0.98] transition-all">
                     <img
-                        src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"
+                        src={assignedClasses[0]?.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
                         className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700"
                         alt="Coach"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6">
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[9px] font-black rounded-full uppercase border border-white/20">Próxima en 15m</span>
+                            <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[9px] font-black rounded-full uppercase border border-white/20">
+                                {assignedClasses[0] ? 'Próxima Clase' : 'Sin clases para hoy'}
+                            </span>
                         </div>
-                        <h2 className="text-2xl font-black text-white leading-tight uppercase tracking-tight">Fit Boxing WOD<br /><span className="text-[#FF1F40]">Avanzado</span></h2>
+                        <h2 className="text-2xl font-black text-white leading-tight uppercase tracking-tight">
+                            {assignedClasses[0]?.name || 'Agenda Libre'}
+                        </h2>
                     </div>
                 </section>
 
