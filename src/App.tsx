@@ -72,8 +72,8 @@ const AppContent = () => {
           const profileData = profileSnap.data();
           setUserProfile(profileData);
 
-          // Redirect based on role
-          if (profileData.isApproved) {
+          // Redirect based on role only if at root path
+          if (profileData.isApproved && (window.location.pathname === '/' || window.location.pathname === '')) {
             if (profileData.role === 'admin') navigate('/admin');
             else if (profileData.role === 'coach') navigate('/coach');
             else navigate('/');
