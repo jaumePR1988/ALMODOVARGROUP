@@ -78,7 +78,7 @@ const CoachDashboard = () => {
         const today = new Date().toISOString().split('T')[0];
         const q = query(
             collection(db, 'classes'),
-            where('coachId', '==', coachProfileId),
+            // where('coachId', '==', coachProfileId), <-- COMENTADO PARA DEBUG
             where('date', '==', today),
             orderBy('startTime', 'asc')
         );
@@ -168,11 +168,15 @@ const CoachDashboard = () => {
                 </header>
 
                 <div className="bg-yellow-500/10 border border-yellow-500/50 p-4 rounded-xl text-xs font-mono mb-4 text-yellow-500 overflow-x-auto">
-                    <p><strong>DEBUG INFO:</strong></p>
-                    <p>User Email: {user?.email}</p>
-                    <p>Coach Profile ID: {coachProfileId || 'BUSCANDO...'}</p>
-                    <p>Fecha Hoy: {new Date().toISOString().split('T')[0]}</p>
-                    <p>Clases Encontradas: {assignedClasses.length}</p>
+                    <p><strong>DEBUG INFO EXTENDIDO:</strong></p>
+                    <p>Mi Coach ID (Profile): {coachProfileId}</p>
+                    <p>--------------------------------</p>
+                    <p>Clases Totales encontradas hoy: {assignedClasses.length}</p>
+                    {assignedClasses.map(cls => (
+                        <p key={cls.id} className={cls.coachId === coachProfileId ? 'text-green-500 font-bold' : 'text-red-500'}>
+                            [{cls.startTime}] {cls.name} - Assigned CoachID: {cls.coachId}
+                        </p>
+                    ))}
                 </div>
 
                 {/* Coach Stats Grid */}
