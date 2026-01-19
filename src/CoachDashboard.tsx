@@ -28,6 +28,7 @@ const CoachDashboard = () => {
     const [stats, setStats] = useState({ totalClasses: 0, totalStudents: 0 });
     const navigate = useNavigate();
     const [user, setUser] = useState<any>(null);
+    const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -52,14 +53,32 @@ const CoachDashboard = () => {
         return () => observer.disconnect();
     }, []);
 
-    // Fetch assigned classes and calculate stats
+    // Find Coach Profile ID by Email
     useEffect(() => {
-        if (!user) return; // Wait for user
+        if (!user || !user.email) return;
+
+        const q = query(collection(db, 'coaches'), where('email', '==', user.email));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            if (!snapshot.empty) {
+                // Assuming one profile per email
+                setCoachProfileId(snapshot.docs[0].id);
+            } else {
+                console.warn("No coach profile found for email:", user.email);
+                // Fallback to uid if no profile found, though likely won't match if using generated IDs
+                setCoachProfileId(user.uid);
+            }
+        });
+        return () => unsubscribe();
+    }, [user]);
+
+    // Fetch assigned classes using Coach Profile ID
+    useEffect(() => {
+        if (!coachProfileId) return;
 
         const today = new Date().toISOString().split('T')[0];
         const q = query(
             collection(db, 'classes'),
-            where('coachId', '==', user.uid),
+            where('coachId', '==', coachProfileId),
             where('date', '==', today),
             orderBy('startTime', 'asc')
         );
@@ -81,7 +100,7 @@ const CoachDashboard = () => {
         });
 
         return () => unsubscribe();
-    }, [user]);
+    }, [coachProfileId]);
 
     const toggleTheme = () => {
         const newDarkMode = !isDarkMode;
