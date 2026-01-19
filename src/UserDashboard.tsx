@@ -15,7 +15,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { db, auth } from './firebase';
-import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 
 const UserDashboard = () => {
@@ -28,7 +28,8 @@ const UserDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().getDate().toString());
   const [classList, setClassList] = useState<any[]>([]);
   const [nextClass, setNextClass] = useState<any>(null);
-  const [userReservations, setUserReservations] = useState<string[]>([]);
+  const [userReservations, setUserReservations] = useState<{ [key: string]: string }>({}); // classId -> status
+  const [pendingPromotion, setPendingPromotion] = useState<any>(null);
 
   // Fake User ID for demo
   const userId = "current-user-123";
@@ -131,14 +132,26 @@ const UserDashboard = () => {
   useEffect(() => {
     const q = query(collection(db, 'reservations'), where('userId', '==', userId));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const resIds = querySnapshot.docs.map(doc => doc.data().classId);
-      setUserReservations(resIds);
+      const resMap: { [key: string]: string } = {};
+      let promotionFound = null;
+
+      querySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        resMap[data.classId] = data.status || 'confirmed'; // Default to confirmed for backward compat
+
+        // Check for pending promotion
+        if (data.status === 'pending_confirmation') {
+          promotionFound = { id: doc.id, ...data };
+        }
+      });
+      setUserReservations(resMap);
+      setPendingPromotion(promotionFound); // Set global alert state
 
       // If there are reservations, fetch the first one for "Next Class"
-      if (resIds.length > 0) {
+      const confirmedIds = Object.keys(resMap).filter(id => resMap[id] === 'confirmed');
+      if (confirmedIds.length > 0) {
         // Just for demo, take the first one. 
-        // In a real app we would sort by date and find the closest
-        const firstClassId = resIds[0];
+        const firstClassId = confirmedIds[0];
         const classRef = query(collection(db, 'classes'), limit(50)); // Simple fetch
         onSnapshot(classRef, (snap) => {
           const found = snap.docs.find(d => d.id === firstClassId);
@@ -151,29 +164,141 @@ const UserDashboard = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleReserve = async (classId: string, current: number, max: number) => {
-    if (userReservations.includes(classId)) return;
-    if (current >= max) {
-      alert("Clase completa");
+  // Handle Reservation / Waitlist / Confirmation
+  const handleReserve = async (classId: string, current: number, max: number, currentStatus?: string) => {
+    // If already confirmed or in queue, this button acts as Cancel (logic handled in UI usually, but double check)
+    if (userReservations[classId]) {
+      // The UI should call handleCancel, but just in case
       return;
     }
 
     try {
-      // 1. Add reservation
-      await addDoc(collection(db, 'reservations'), {
-        userId,
-        classId,
-        reservedAt: new Date().toISOString()
+      if (current >= max) {
+        // JOIN WAITLIST
+        await addDoc(collection(db, 'reservations'), {
+          userId,
+          classId,
+          reservedAt: new Date().toISOString(),
+          status: 'waitlist'
+        });
+        alert("¡Te has unido a la lista de espera! Te avisaremos si queda un sitio libre.");
+      } else {
+        // CONFIRM RESERVATION
+        await addDoc(collection(db, 'reservations'), {
+          userId,
+          classId,
+          reservedAt: new Date().toISOString(),
+          status: 'confirmed'
+        });
+
+        // Decrement capacity
+        const classRef = doc(db, 'classes', classId);
+        await updateDoc(classRef, {
+          currentCapacity: increment(1)
+        });
+      }
+
+    } catch (error) {
+      console.error("Error reserving: ", error);
+    }
+  };
+
+  // Accept Promotion
+  const handleAcceptPromotion = async (reservationId: string, classId: string) => {
+    try {
+      // 1. Update Reservation Status
+      await updateDoc(doc(db, 'reservations', reservationId), {
+        status: 'confirmed'
       });
 
-      // 2. Increment capacity
+      // 2. Increment Class Capacity
       const classRef = doc(db, 'classes', classId);
       await updateDoc(classRef, {
         currentCapacity: increment(1)
       });
 
+      setPendingPromotion(null);
+      alert("¡Plaza confirmada! Nos vemos en clase.");
+
     } catch (error) {
-      console.error("Error reserving: ", error);
+      console.error("Error confirming promotion:", error);
+    }
+  };
+
+
+  // Handle Cancel (Complex Logic: Promote next user)
+  const handleCancel = async (classId: string) => {
+    if (!confirm("¿Seguro que quieres cancelar tu reserva?")) return;
+
+    try {
+      // 1. Find the user's reservation doc
+      const q = query(collection(db, 'reservations'), where('userId', '==', userId), where('classId', '==', classId));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return;
+
+      const reservationDoc = snapshot.docs[0];
+      const status = reservationDoc.data().status || 'confirmed';
+
+      // 2. Delete reservation
+      await deleteDoc(reservationDoc.ref);
+
+      // 3. Logic: If it was 'confirmed', we opened a spot. Check Waitlist.
+      if (status === 'confirmed') {
+        // Decrement capacity update (temporarily, until someone takes it? or immediately?)
+        // Requirement: "propose to first reserve".
+        // So we effectively decrement capacity, OR we assign it to the pending user.
+        // To avoid race conditions, let's decrement first. 
+        const classRef = doc(db, 'classes', classId);
+        await updateDoc(classRef, {
+          currentCapacity: increment(-1)
+        });
+
+        // 4. FIND NEXT IN WAITLIST
+        const wq = query(
+          collection(db, 'reservations'),
+          where('classId', '==', classId),
+          where('status', '==', 'waitlist'),
+          orderBy('reservedAt', 'asc'),
+          limit(1)
+        );
+        const waitlistSnap = await getDocs(wq);
+
+        if (!waitlistSnap.empty) {
+          const nextUser = waitlistSnap.docs[0];
+          // Promote to 'pending_confirmation'
+          // We DO NOT increment capacity yet. They must accept.
+          await updateDoc(nextUser.ref, {
+            status: 'pending_confirmation',
+            promotedAt: new Date().toISOString()
+          });
+          // Here we would send Push Notification via backend. 
+          // Since we are client-side only, the 'pending_confirmation' status update 
+          // will trigger the UI alert for that user when they login.
+        }
+      } else {
+        // If it was 'waitlist' or 'pending', just removed. No capacity change needed.
+        // If 'pending', we might want to trigger next in line? Yes.
+        if (status === 'pending_confirmation') {
+          // Same logic as above: find next waitlist.
+          const wq = query(
+            collection(db, 'reservations'),
+            where('classId', '==', classId),
+            where('status', '==', 'waitlist'),
+            orderBy('reservedAt', 'asc'),
+            limit(1)
+          );
+          const waitlistSnap = await getDocs(wq);
+          if (!waitlistSnap.empty) {
+            await updateDoc(waitlistSnap.docs[0].ref, {
+              status: 'pending_confirmation',
+              promotedAt: new Date().toISOString()
+            });
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error("Error canceling:", error);
     }
   };
 
@@ -199,6 +324,20 @@ const UserDashboard = () => {
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
       {/* Mobile Wrapper: max-w-md mx-auto */}
       <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
+
+        {/* Global Notification for Pending Promotion */}
+        {pendingPromotion && (
+          <div className="bg-[#FF1F40] text-white p-4 rounded-2xl shadow-xl animate-pulse cursor-pointer" onClick={() => handleAcceptPromotion(pendingPromotion.id, pendingPromotion.classId)}>
+            <div className="flex items-center gap-3">
+              <Bell size={24} className="animate-bounce" />
+              <div>
+                <h3 className="font-black text-xs uppercase tracking-widest">¡Plaza Disponible!</h3>
+                <p className="text-xs font-medium">Se ha liberado un hueco en tu clase. Toca para confirmar.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* 2. Header */}
         <div className="flex justify-between items-center mb-2">
@@ -360,7 +499,8 @@ const UserDashboard = () => {
             </div>
           ) : (
             classList.map((item) => {
-              const isReserved = userReservations.includes(item.id);
+              const reservationStatus = userReservations[item.id]; // 'confirmed', 'waitlist', 'pending_confirmation', or undefined
+              const isReserved = !!reservationStatus;
               const isFull = item.currentCapacity >= item.maxCapacity;
 
               return (
@@ -396,8 +536,8 @@ const UserDashboard = () => {
 
                       {/* Capacity Badge */}
                       <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${isFull
-                          ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                          : 'bg-green-500/10 text-green-500 border-green-500/20'
+                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                        : 'bg-green-500/10 text-green-500 border-green-500/20'
                         }`}>
                         {isFull ? 'COMPLETO' : `${item.currentCapacity}/${item.maxCapacity}`}
                       </div>
