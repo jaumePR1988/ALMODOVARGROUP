@@ -14,6 +14,7 @@ const AdminUsersList = () => {
     const [filter, setFilter] = useState<'all' | 'pending' | 'active'>('all');
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
@@ -70,18 +71,12 @@ const AdminUsersList = () => {
     };
 
     const handleDeleteUser = async (userId: string) => {
-        console.log("Attempting to delete user:", userId);
-        const confirmDelete = window.confirm('¿ESTÁS SEGURO? Esta acción eliminará permanentemente al usuario y no se puede deshacer.');
-        if (confirmDelete) {
-            try {
-                await deleteDoc(doc(db, 'users', userId));
-                console.log("User deleted successfully");
-            } catch (error) {
-                console.error("Error deleting user:", error);
-                alert("Error al eliminar: " + (error as Error).message);
-            }
-        } else {
-            console.log("Delete cancelled by user");
+        try {
+            await deleteDoc(doc(db, 'users', userId));
+            console.log("User deleted successfully");
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            alert("Error al eliminar: " + (error as Error).message);
         }
     };
 
@@ -202,7 +197,13 @@ const AdminUsersList = () => {
                                 onUpdateRole={(role: string) => handleUpdateRole(user.id, role)}
                                 onUpdatePlan={(plan: string) => handleUpdatePlan(user.id, plan)}
                                 onUpdateGroup={(group: string) => handleUpdateGroup(user.id, group)}
-                                onDelete={() => handleDeleteUser(user.id)}
+                                onDelete={() => setUserToDelete(user.id)}
+                                isDeleting={userToDelete === user.id}
+                                onCancelDelete={() => setUserToDelete(null)}
+                                onConfirmDelete={() => {
+                                    handleDeleteUser(user.id);
+                                    setUserToDelete(null);
+                                }}
                             />
                         ))}
                     </div>
@@ -222,7 +223,7 @@ const AdminUsersList = () => {
     );
 };
 
-const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdateGroup, onDelete }: any) => {
+const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdateGroup, onDelete, isDeleting, onCancelDelete, onConfirmDelete }: any) => {
     return (
         <div className={`bg-[#2A2D3A] rounded-[2rem] border border-white/5 overflow-hidden transition-all hover:border-[#FF1F40]/30 group ${isList ? 'flex items-center p-4' : 'flex flex-col p-6'}`}>
 
@@ -323,65 +324,90 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
 
             {/* Actions */}
             <div className={`flex items-center gap-2 ${isList ? '' : 'mt-auto'}`}>
-                {!user.isApproved ? (
-                    <button
-                        onClick={onApprove}
-                        className="flex-1 flex items-center justify-center gap-2 bg-yellow-500 text-black py-4 rounded-2xl font-black uppercase italic text-xs tracking-widest shadow-lg shadow-yellow-900/10 hover:bg-yellow-400 transition-all active:scale-95"
-                    >
-                        <UserCheck size={16} />
-                        Aprobar
-                    </button>
-                ) : isList ? (
-                    <div className="flex items-center gap-2">
-                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
-                            <select
-                                value={user.role || 'client'}
-                                onChange={(e) => onUpdateRole(e.target.value)}
-                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
-                            >
-                                <option value="client">Cliente</option>
-                                <option value="coach">Coach</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        {user.role !== 'admin' && (
-                            <>
-                                <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
-                                    <select
-                                        value={user.plan || ''}
-                                        onChange={(e) => onUpdatePlan(e.target.value)}
-                                        className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
-                                    >
-                                        <option value="">Sin Plan</option>
-                                        <option value="Mancuerna">Mancuerna</option>
-                                        <option value="Burpees">Burpees</option>
-                                    </select>
-                                </div>
-                                <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
-                                    <select
-                                        value={user.group || ''}
-                                        onChange={(e) => onUpdateGroup(e.target.value)}
-                                        className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
-                                    >
-                                        <option value="">Sin Grupo</option>
-                                        <option value="AlmodovarBOX">BOX</option>
-                                        <option value="AlmodovarFIT">FIT</option>
-                                    </select>
-                                </div>
-                            </>
-                        )}
+                {isDeleting ? (
+                    <div className="flex-1 flex items-center gap-2 animate-in slide-in-from-right-4 duration-300">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onConfirmDelete();
+                            }}
+                            className="flex-1 bg-red-500 text-white py-4 rounded-2xl font-black uppercase italic text-[10px] tracking-widest shadow-lg shadow-red-900/20 hover:bg-red-400 transition-all active:scale-95"
+                        >
+                            Confirmar Borrado
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCancelDelete();
+                            }}
+                            className="px-4 py-4 bg-white/5 text-gray-400 rounded-2xl font-bold uppercase text-[10px] hover:bg-white/10 transition-all"
+                        >
+                            no
+                        </button>
                     </div>
-                ) : null}
+                ) : (
+                    <>
+                        {!user.isApproved ? (
+                            <button
+                                onClick={onApprove}
+                                className="flex-1 flex items-center justify-center gap-2 bg-yellow-500 text-black py-4 rounded-2xl font-black uppercase italic text-xs tracking-widest shadow-lg shadow-yellow-900/10 hover:bg-yellow-400 transition-all active:scale-95"
+                            >
+                                <UserCheck size={16} />
+                                Aprobar
+                            </button>
+                        ) : isList ? (
+                            <div className="flex items-center gap-2">
+                                <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                    <select
+                                        value={user.role || 'client'}
+                                        onChange={(e) => onUpdateRole(e.target.value)}
+                                        className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                    >
+                                        <option value="client">Cliente</option>
+                                        <option value="coach">Coach</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                {user.role !== 'admin' && (
+                                    <>
+                                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                            <select
+                                                value={user.plan || ''}
+                                                onChange={(e) => onUpdatePlan(e.target.value)}
+                                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                            >
+                                                <option value="">Sin Plan</option>
+                                                <option value="Mancuerna">Mancuerna</option>
+                                                <option value="Burpees">Burpees</option>
+                                            </select>
+                                        </div>
+                                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                            <select
+                                                value={user.group || ''}
+                                                onChange={(e) => onUpdateGroup(e.target.value)}
+                                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                            >
+                                                <option value="">Sin Grupo</option>
+                                                <option value="AlmodovarBOX">BOX</option>
+                                                <option value="AlmodovarFIT">FIT</option>
+                                            </select>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ) : null}
 
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                    }}
-                    className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-500/20"
-                >
-                    <Trash2 size={18} />
-                </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete();
+                            }}
+                            className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-500/20"
+                        >
+                            <Trash2 size={18} />
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );
