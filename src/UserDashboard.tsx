@@ -65,10 +65,35 @@ const UserDashboard = () => {
   useEffect(() => {
     const q = query(collection(db, 'classes'), orderBy('startTime', 'asc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const classesData = querySnapshot.docs.map(doc => ({
+      let classesData: any[] = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      // Fallback to mock data (as per user request)
+      if (classesData.length === 0) {
+        classesData = [
+          {
+            id: 'mock-1',
+            name: 'Cross Training WOD',
+            startTime: '09:00',
+            group: 'fit',
+            currentCapacity: 7,
+            maxCapacity: 15,
+            coachId: 'coach-marc'
+          },
+          {
+            id: 'mock-2',
+            name: 'Open Box Free',
+            startTime: '11:30',
+            group: 'box',
+            currentCapacity: 3,
+            maxCapacity: 20,
+            coachId: 'coach-marc'
+          }
+        ];
+      }
+
       setClassList(classesData);
     });
     return () => unsubscribe();
