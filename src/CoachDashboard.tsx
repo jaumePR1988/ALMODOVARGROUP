@@ -221,9 +221,10 @@ const CoachDashboard = () => {
                                     <img
                                         src={item.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
                                         alt={item.name}
-                                        className="w-full h-full object-cover opacity-20"
+                                        className="w-full h-full object-cover opacity-70"
                                     />
-                                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-r from-[#2A2D3A] via-[#2A2D3A]/95 to-transparent' : 'bg-gradient-to-r from-white via-white/95 to-transparent'}`} />
+                                    {/* Gradient overlay to ensure text readability but show more image */}
+                                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-r from-[#2A2D3A] via-[#2A2D3A]/80 to-transparent' : 'bg-gradient-to-r from-white via-white/80 to-transparent'}`} />
                                 </div>
 
                                 <div className="p-6 space-y-4 relative z-10">
