@@ -170,11 +170,7 @@ const CoachDashboard = () => {
                     </div>
                 </header>
 
-                <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-xl text-xs font-mono mb-4 text-green-600 overflow-x-auto">
-                    <p><strong>ESTADO: CONECTADO ✅</strong></p>
-                    <p>Filtros Activos: CoachID + Fecha de hoy</p>
-                    <p>Clases Encontradas: {assignedClasses.length}</p>
-                </div>
+                {/* Removed Debug Panel */}
 
                 {/* Coach Stats Grid */}
                 <section className="grid grid-cols-2 gap-4">
@@ -203,25 +199,6 @@ const CoachDashboard = () => {
                     </div>
                 </section>
 
-                {/* Next Class Focus */}
-                <section className="relative h-48 rounded-[2.5rem] overflow-hidden shadow-2xl group active:scale-[0.98] transition-all">
-                    <img
-                        src={assignedClasses[0]?.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
-                        className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700"
-                        alt="Coach"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6">
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-[9px] font-black rounded-full uppercase border border-white/20">
-                                {assignedClasses[0] ? 'Próxima Clase' : 'Sin clases para hoy'}
-                            </span>
-                        </div>
-                        <h2 className="text-2xl font-black text-white leading-tight uppercase tracking-tight">
-                            {assignedClasses[0]?.name || 'Agenda Libre'}
-                        </h2>
-                    </div>
-                </section>
-
                 {/* Agenda Section */}
                 <section className="space-y-4">
                     <div className="flex justify-between items-end mb-2">
@@ -240,7 +217,17 @@ const CoachDashboard = () => {
                                 key={item.id}
                                 className={`relative rounded-[2.5rem] overflow-hidden group transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
                             >
-                                <div className="p-6 space-y-4">
+                                {/* Background Image with Overlay */}
+                                <div className="absolute inset-0 z-0">
+                                    <img
+                                        src={item.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover opacity-20"
+                                    />
+                                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-r from-[#2A2D3A] via-[#2A2D3A]/95 to-transparent' : 'bg-gradient-to-r from-white via-white/95 to-transparent'}`} />
+                                </div>
+
+                                <div className="p-6 space-y-4 relative z-10">
                                     <div className="flex justify-between items-start">
                                         <div className="flex items-center gap-3">
                                             <div className="w-12 h-12 rounded-2xl bg-[#FF1F40] flex flex-col items-center justify-center text-white shadow-lg shadow-red-600/20">
