@@ -106,6 +106,11 @@ const CreateCoach = () => {
             return;
         }
 
+        if (!email) {
+            setError('El email es obligatorio para vincular con su cuenta');
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
 
@@ -225,7 +230,7 @@ const CreateCoach = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Email (Opcional)</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Email (Obligatorio)</label>
                         <input
                             value={email}
                             onChange={e => setEmail(e.target.value)}
