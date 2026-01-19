@@ -12,12 +12,14 @@ import {
     LayoutGrid,
     Sun,
     Moon,
-    Activity
+    Activity,
+    User,
+    Clock
 } from 'lucide-react';
 
 const AdminDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-    const [showMenu] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {

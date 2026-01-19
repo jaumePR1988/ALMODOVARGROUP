@@ -10,14 +10,18 @@ import {
     User,
     Zap,
     MapPin,
-    Activity
+    Activity,
+    Home,
+    Plus,
+    Users,
+    MessageSquare
 } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 
 const CoachDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-    const [showMenu] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
     const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
     const [stats, setStats] = useState({ totalClasses: 0, totalStudents: 0 });
     const navigate = useNavigate();
@@ -46,10 +50,37 @@ const CoachDashboard = () => {
         );
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const classesData = querySnapshot.docs.map(doc => ({
+            let classesData: any[] = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+
+            // Fallback to mock data if empty (as per user request)
+            if (classesData.length === 0) {
+                classesData = [
+                    {
+                        id: 'mock-1',
+                        name: 'Fit Boxing WOD',
+                        startTime: '09:00',
+                        group: 'fit',
+                        currentCapacity: 8,
+                        maxCapacity: 12,
+                        coachId: coachId,
+                        status: 'Próxima'
+                    },
+                    {
+                        id: 'mock-2',
+                        name: 'Open Box',
+                        startTime: '11:30',
+                        group: 'box',
+                        currentCapacity: 4,
+                        maxCapacity: 15,
+                        coachId: coachId,
+                        status: 'Disponible'
+                    }
+                ];
+            }
+
             setAssignedClasses(classesData);
 
             // Calculate stats
