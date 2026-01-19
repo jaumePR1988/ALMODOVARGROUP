@@ -18,6 +18,7 @@ const ClassManagement = () => {
     const [classList, setClassList] = useState<any[]>([]);
     const [weekDays, setWeekDays] = useState<{ day: string; date: number; fullDate: string; active: boolean }[]>([]);
     const [classToDelete, setClassToDelete] = useState<string | null>(null);
+    const [coachesMap, setCoachesMap] = useState<Record<string, string>>({});
 
     // Sync with global theme
     useEffect(() => {
@@ -61,6 +62,18 @@ const ClassManagement = () => {
                 ...doc.data()
             }));
             setClassList(classesData);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // Fetch Coaches for lookup
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'coaches'), (snapshot) => {
+            const map: Record<string, string> = {};
+            snapshot.docs.forEach(doc => {
+                map[doc.id] = doc.data().name;
+            });
+            setCoachesMap(map);
         });
         return () => unsubscribe();
     }, []);
@@ -153,7 +166,9 @@ const ClassManagement = () => {
                                                 <div className="w-4 h-4 rounded-full bg-gray-500/20 flex items-center justify-center">
                                                     <User size={10} className="text-gray-500" />
                                                 </div>
-                                                <span className="text-[10px] font-bold text-gray-500 uppercase">{clase.coachId?.split('-').join(' ')}</span>
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase">
+                                                    {coachesMap[clase.coachId] || 'Coach'}
+                                                </span>
                                             </div>
                                             <span className="text-gray-400 text-[10px]">•</span>
                                             <div className="flex items-center gap-1">
