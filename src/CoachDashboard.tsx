@@ -167,6 +167,14 @@ const CoachDashboard = () => {
                     </div>
                 </header>
 
+                <div className="bg-yellow-500/10 border border-yellow-500/50 p-4 rounded-xl text-xs font-mono mb-4 text-yellow-500 overflow-x-auto">
+                    <p><strong>DEBUG INFO:</strong></p>
+                    <p>User Email: {user?.email}</p>
+                    <p>Coach Profile ID: {coachProfileId || 'BUSCANDO...'}</p>
+                    <p>Fecha Hoy: {new Date().toISOString().split('T')[0]}</p>
+                    <p>Clases Encontradas: {assignedClasses.length}</p>
+                </div>
+
                 {/* Coach Stats Grid */}
                 <section className="grid grid-cols-2 gap-4">
                     <div className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-5 rounded-3xl flex flex-col justify-between h-36 border border-transparent dark:border-gray-800/50`}>
