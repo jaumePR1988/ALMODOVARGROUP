@@ -55,6 +55,14 @@ const AdminUsersList = () => {
         }
     };
 
+    const handleUpdateGroup = async (userId: string, group: string) => {
+        try {
+            await updateDoc(doc(db, 'users', userId), { group });
+        } catch (error) {
+            console.error("Error updating group:", error);
+        }
+    };
+
     const handleDeleteUser = async (userId: string) => {
         if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
             try {
@@ -181,6 +189,7 @@ const AdminUsersList = () => {
                                 onApprove={() => handleApprove(user.id)}
                                 onUpdateRole={(role: string) => handleUpdateRole(user.id, role)}
                                 onUpdatePlan={(plan: string) => handleUpdatePlan(user.id, plan)}
+                                onUpdateGroup={(group: string) => handleUpdateGroup(user.id, group)}
                                 onDelete={() => handleDeleteUser(user.id)}
                             />
                         ))}
@@ -201,7 +210,7 @@ const AdminUsersList = () => {
     );
 };
 
-const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onDelete }: any) => {
+const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdateGroup, onDelete }: any) => {
     return (
         <div className={`bg-[#2A2D3A] rounded-[2rem] border border-white/5 overflow-hidden transition-all hover:border-[#FF1F40]/30 group ${isList ? 'flex items-center p-4' : 'flex flex-col p-6'}`}>
 
@@ -242,6 +251,11 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onDelet
                                     {user.plan}
                                 </span>
                             )}
+                            {user.group && (
+                                <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
+                                    {user.group}
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -275,6 +289,18 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onDelet
                                 <option value="Burpees">Burpees (3)</option>
                             </select>
                         </div>
+                    </div>
+                    <div className="bg-[#1F2128] p-3 rounded-xl border border-white/5">
+                        <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Grupo</p>
+                        <select
+                            value={user.group || ''}
+                            onChange={(e) => onUpdateGroup(e.target.value)}
+                            className="w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40]"
+                        >
+                            <option value="">Sin Grupo</option>
+                            <option value="AlmodovarBOX">Almodóvar BOX</option>
+                            <option value="AlmodovarFIT">Almodóvar FIT</option>
+                        </select>
                     </div>
                 </div>
             )}
@@ -313,11 +339,25 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onDelet
                                 <option value="Burpees">Burpees</option>
                             </select>
                         </div>
+                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                            <select
+                                value={user.group || ''}
+                                onChange={(e) => onUpdateGroup(e.target.value)}
+                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                            >
+                                <option value="">Sin Grupo</option>
+                                <option value="AlmodovarBOX">BOX</option>
+                                <option value="AlmodovarFIT">FIT</option>
+                            </select>
+                        </div>
                     </div>
                 ) : null}
 
                 <button
-                    onClick={onDelete}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                    }}
                     className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all active:scale-95 border border-red-500/20"
                 >
                     <Trash2 size={18} />
