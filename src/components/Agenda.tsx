@@ -62,8 +62,7 @@ const Agenda = () => {
         console.log("Agenda: Fetching classes...", selectedGroup, selectedDate);
         const q = query(
             collection(db, 'classes'),
-            where('group', '==', selectedGroup),
-            orderBy('startTime', 'asc')
+            where('group', '==', selectedGroup)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -93,6 +92,10 @@ const Agenda = () => {
             if (targetFullDate) {
                 data = data.filter((c: any) => c.date === targetFullDate);
             }
+
+            // Client-side Sort
+            data.sort((a: any, b: any) => a.startTime.localeCompare(b.startTime));
+
             console.log("Agenda: Classes found", data.length);
             setClassList(data);
         });
