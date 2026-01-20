@@ -54,14 +54,18 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
         if (!user || !user.email) return;
 
         const q = query(collection(db, 'coaches'), where('email', '==', user.email));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            if (!snapshot.empty) {
-                // Assuming one profile per email
-                setCoachProfileId(snapshot.docs[0].id);
-            } else {
-                console.warn("No coach profile found for email:", user.email);
-                // Fallback to uid if no profile found, though likely won't match if using generated IDs
-                setCoachProfileId(user.uid);
+        const unsubscribe = onSnapshot(q, {
+            next: (snapshot) => {
+                if (!snapshot.empty) {
+                    setCoachProfileId(snapshot.docs[0].id);
+                } else {
+                    console.warn("No coach profile found for email:", user.email);
+                    setCoachProfileId(user.uid);
+                }
+            },
+            error: (err) => {
+                console.error("Coach profile permission error:", err);
+                setCoachProfileId(user.uid); // Fallback
             }
         });
         return () => unsubscribe();
