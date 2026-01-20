@@ -660,10 +660,10 @@ const UserDashboard = () => {
             <span className="text-[10px] font-bold tracking-wide">Box</span>
           </a>
 
-          <a href="#" className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
+          <button onClick={() => navigate('/agenda')} className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
             <Calendar size={26} strokeWidth={2} />
             <span className="text-[10px] font-bold tracking-wide">Agenda</span>
-          </a>
+          </button>
 
           {/* Central Plus Button - PERFECTLY CENTERED */}
           <div className="relative -top-8">
