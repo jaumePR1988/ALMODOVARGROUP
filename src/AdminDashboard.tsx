@@ -10,12 +10,10 @@ import {
     Upload,
     Plus,
     LayoutGrid,
-    Sun,
     Moon,
     Activity,
     User,
-    LogOut,
-    Check
+    LogOut
 } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
 import { db, auth } from './firebase';

@@ -2,12 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Calendar,
-    MapPin,
-    Clock,
     User,
-    Home,
-    ArrowLeft,
-    Bell
+    ArrowLeft
 } from 'lucide-react';
 import BottomNavigation from './BottomNavigation';
 import { db, auth } from '../firebase';
@@ -297,16 +293,8 @@ const Agenda = () => {
 
             {/* Reusable Bottom Navigation */}
             <BottomNavigation
-                role={userProfile?.role || 'user'} // Default to 'user' if not loaded (or show loading?)
+                role={userProfile?.role || 'user'}
                 activeTab="agenda"
-            // No FAB handler needed here probably, or handle same way?
-            // Agenda doesn't necessarily need the menu overlay unless requested.
-            // For now, let's keep it simple: no menu opening, or just empty handler?
-            // Wait, if I pass no handler, does FAB look disabled? 
-            // Let's pass a dummy for now or implement showMenu state in Agenda too if needed.
-            // The prompt says "consistent navigation", implies the button should look the same.
-            // If I click Plus in Agenda, strictly speaking it should open the same menu.
-            // For now, let's just render the bar.
             />
 
         </div>
