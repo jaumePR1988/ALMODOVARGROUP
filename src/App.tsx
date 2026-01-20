@@ -51,7 +51,6 @@ import ClassManagement from './components/ClassManagement';
 import CreateClass from './components/CreateClass';
 import ManageCoaches from './components/ManageCoaches';
 import CreateCoach from './components/CreateCoach';
-import CreateCoach from './components/CreateCoach';
 import AdminUsersList from './components/AdminUsersList';
 import Agenda from './components/Agenda';
 
