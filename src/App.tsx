@@ -51,7 +51,9 @@ import ClassManagement from './components/ClassManagement';
 import CreateClass from './components/CreateClass';
 import ManageCoaches from './components/ManageCoaches';
 import CreateCoach from './components/CreateCoach';
+import CreateCoach from './components/CreateCoach';
 import AdminUsersList from './components/AdminUsersList';
+import Agenda from './components/Agenda';
 
 const AppContent = () => {
   const navigate = useNavigate();
@@ -147,6 +149,7 @@ const AppContent = () => {
       <Route path="/manage-coaches" element={<ManageCoaches />} />
       <Route path="/create-coach" element={<CreateCoach />} />
       <Route path="/manage-users" element={<AdminUsersList />} />
+      <Route path="/agenda" element={<Agenda />} />
       {/* Dev Switch */}
       <Route path="/switch" element={<DevSwitch onLogout={handleLogout} />} />
     </Routes>
