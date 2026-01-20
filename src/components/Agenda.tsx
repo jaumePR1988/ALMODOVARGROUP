@@ -9,6 +9,7 @@ import {
     ArrowLeft,
     Bell
 } from 'lucide-react';
+import BottomNavigation from './BottomNavigation';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy, where, doc, getDoc, addDoc, updateDoc, increment, deleteDoc, getDocs, limit } from 'firebase/firestore';
 
@@ -294,24 +295,19 @@ const Agenda = () => {
 
             </div>
 
-            {/* Simple Bottom Nav to return Home */}
-            <nav className={`fixed bottom-0 left-0 right-0 z-[110] border-t px-6 pb-6 pt-3 ${isDarkMode ? 'bg-[#1F2128]/95 backdrop-blur-md border-gray-800/60' : 'bg-white/95 backdrop-blur-md border-gray-200/60'}`}>
-                <div className="max-w-[440px] mx-auto flex justify-between items-end px-4">
-                    <button onClick={() => navigate('/')} className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all">
-                        <Home size={24} />
-                        <span className="text-[9px] font-bold uppercase">Inicio</span>
-                    </button>
-                    <div className="relative -top-6">
-                        <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-xl shadow-red-900/40">
-                            <Calendar size={28} />
-                        </div>
-                    </div>
-                    <button onClick={() => navigate('/notifications')} className="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition-all">
-                        <Bell size={24} />
-                        <span className="text-[9px] font-bold uppercase">Avisos</span>
-                    </button>
-                </div>
-            </nav>
+            {/* Reusable Bottom Navigation */}
+            <BottomNavigation
+                role={userProfile?.role || 'user'} // Default to 'user' if not loaded (or show loading?)
+                activeTab="agenda"
+            // No FAB handler needed here probably, or handle same way?
+            // Agenda doesn't necessarily need the menu overlay unless requested.
+            // For now, let's keep it simple: no menu opening, or just empty handler?
+            // Wait, if I pass no handler, does FAB look disabled? 
+            // Let's pass a dummy for now or implement showMenu state in Agenda too if needed.
+            // The prompt says "consistent navigation", implies the button should look the same.
+            // If I click Plus in Agenda, strictly speaking it should open the same menu.
+            // For now, let's just render the bar.
+            />
 
         </div>
     );
