@@ -18,7 +18,7 @@ import { collection, onSnapshot, query, where, orderBy, limit, getDocs, getDoc, 
 import { auth, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
-const CoachDashboard = () => {
+const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
     const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
     const [stats, setStats] = useState({ totalClasses: 0, totalStudents: 0 });
@@ -81,10 +81,51 @@ const CoachDashboard = () => {
         );
 
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-            const classesData: any[] = querySnapshot.docs.map(doc => ({
+            let classesData: any[] = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+
+            // SIMULATION: If no real classes, inject mock data for demo purposes
+            if (classesData.length === 0) {
+                console.log("Simulating Coach Dashboard 2.0 data...");
+                classesData = [
+                    {
+                        id: 'mock-1',
+                        name: 'Entrenamiento Funcional (SIMULACIÓN)',
+                        location: 'Área 1',
+                        startTime: '09:00',
+                        endTime: '10:00',
+                        currentCapacity: 12,
+                        maxCapacity: 15,
+                        image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop'
+                    },
+                    {
+                        id: 'mock-2',
+                        name: 'Cross Training (SIMULACIÓN)',
+                        location: 'Área 2',
+                        startTime: '18:00',
+                        endTime: '19:00',
+                        currentCapacity: 8,
+                        maxCapacity: 20,
+                        image: 'https://images.unsplash.com/photo-1541534741688-6078c64b52d2?q=80&w=1470&auto=format&fit=crop'
+                    }
+                ];
+
+                // Mock attendees for simulation
+                const mockAttendees: { [key: string]: string[] } = {
+                    'mock-1': [
+                        'https://i.pravatar.cc/150?u=1',
+                        'https://i.pravatar.cc/150?u=2',
+                        'https://i.pravatar.cc/150?u=3'
+                    ],
+                    'mock-2': [
+                        'https://i.pravatar.cc/150?u=4',
+                        'https://i.pravatar.cc/150?u=5'
+                    ]
+                };
+                setClassAttendees(mockAttendees);
+            }
 
             classesData.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
             setAssignedClasses(classesData);
@@ -96,26 +137,28 @@ const CoachDashboard = () => {
                 totalStudents
             });
 
-            // Fetch top avatars for each class
-            const attendeesMap: { [key: string]: string[] } = {};
-            for (const cls of classesData) {
-                const resQ = query(
-                    collection(db, 'reservations'),
-                    where('classId', '==', cls.id),
-                    limit(3)
-                );
-                const resSnap = await getDocs(resQ);
-                const avatars: string[] = [];
-                for (const resDoc of resSnap.docs) {
-                    const resData = resDoc.data();
-                    const userSnap = await getDoc(doc(db, 'users', resData.userId));
-                    if (userSnap.exists()) {
-                        avatars.push(userSnap.data().photoURL || '');
+            // Fetch top avatars (only if not mock)
+            if (classesData.length > 0 && classesData[0].id !== 'mock-1' && classesData[0].id !== 'mock-2') {
+                const attendeesMap: { [key: string]: string[] } = {};
+                for (const cls of classesData) {
+                    const resQ = query(
+                        collection(db, 'reservations'),
+                        where('classId', '==', cls.id),
+                        limit(3)
+                    );
+                    const resSnap = await getDocs(resQ);
+                    const avatars: string[] = [];
+                    for (const resDoc of resSnap.docs) {
+                        const resData = resDoc.data();
+                        const userSnap = await getDoc(doc(db, 'users', resData.userId));
+                        if (userSnap.exists()) {
+                            avatars.push(userSnap.data().photoURL || '');
+                        }
                     }
+                    attendeesMap[cls.id] = avatars;
                 }
-                attendeesMap[cls.id] = avatars;
+                setClassAttendees(attendeesMap);
             }
-            setClassAttendees(attendeesMap);
         });
 
         return () => unsubscribe();
@@ -134,6 +177,7 @@ const CoachDashboard = () => {
                     title="Coach Panel"
                     subtitle={`Hola, ${user?.displayName || 'Coach'} 👋`}
                     showNotificationDot={false}
+                    onLogout={onLogout}
                 />
 
                 {/* Removed Debug Panel */}

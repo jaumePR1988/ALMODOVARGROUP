@@ -139,9 +139,9 @@ const AppContent = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<UserDashboard />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/coach" element={<CoachDashboard />} />
+      <Route path="/" element={<UserDashboard onLogout={handleLogout} />} />
+      <Route path="/admin" element={<AdminDashboard onLogout={handleLogout} />} />
+      <Route path="/coach" element={<CoachDashboard onLogout={handleLogout} />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/notification-settings" element={<NotificationSettings />} />
       <Route path="/manage-classes" element={<ClassManagement />} />

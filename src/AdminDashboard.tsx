@@ -19,7 +19,7 @@ import { db, auth } from './firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
     const [stats, setStats] = useState({ activeUsers: 142, todayClasses: 0, pendingUsers: 0, currentAttendance: 0 });
     const navigate = useNavigate();
@@ -82,6 +82,7 @@ const AdminDashboard = () => {
                     title="Admin Dashboard"
                     subtitle="Almodovar Group"
                     showNotificationDot={stats.pendingUsers > 0}
+                    onLogout={onLogout}
                 />
 
                 {/* Stats Grid */}

@@ -10,6 +10,7 @@ interface TopHeaderProps {
     showNotificationDot?: boolean;
     avatarText?: string;
     onBack?: () => void;
+    onLogout?: () => void;
 }
 
 const TopHeader: React.FC<TopHeaderProps> = ({
@@ -17,7 +18,8 @@ const TopHeader: React.FC<TopHeaderProps> = ({
     subtitle,
     showNotificationDot = true,
     avatarText = "AG",
-    onBack
+    onBack,
+    onLogout
 }) => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -47,8 +49,12 @@ const TopHeader: React.FC<TopHeaderProps> = ({
     const handleLogout = async () => {
         if (window.confirm('¿Cerrar sesión?')) {
             try {
-                await signOut(auth);
-                navigate('/');
+                if (onLogout) {
+                    onLogout();
+                } else {
+                    await signOut(auth);
+                    navigate('/');
+                }
             } catch (error) {
                 console.error("Error signing out:", error);
             }
@@ -95,6 +101,7 @@ const TopHeader: React.FC<TopHeaderProps> = ({
 
                 {/* Logout Button */}
                 <button
+                    type="button"
                     onClick={handleLogout}
                     className={`w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg border ${isDarkMode
                         ? 'bg-red-500/10 text-red-500 border-red-500/10 shadow-red-900/10'

@@ -16,7 +16,7 @@ import { db, auth } from './firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs } from 'firebase/firestore';
 
 
-const UserDashboard = () => {
+const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const navigate = useNavigate();
   // 1. Configuración General: Dark Mode by default
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -328,6 +328,7 @@ const UserDashboard = () => {
           title="Almodovar Group"
           subtitle="v2.1 • Hola, Jaume 👋"
           showNotificationDot={!!pendingPromotion}
+          onLogout={onLogout}
         />
 
         {/* 3. Créditos (Grid 2 col) */}
