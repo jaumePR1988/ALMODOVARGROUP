@@ -5,13 +5,9 @@ import {
     MapPin,
     Clock,
     User,
-    Check,
-    LogOut,
-    Activity,
     Home,
-    Plus,
-    Filter,
-    ArrowLeft
+    ArrowLeft,
+    Bell
 } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy, where, doc, getDoc, addDoc, updateDoc, increment, deleteDoc, getDocs, limit } from 'firebase/firestore';
