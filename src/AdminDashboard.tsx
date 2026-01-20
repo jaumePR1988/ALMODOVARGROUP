@@ -14,9 +14,10 @@ import {
     Moon,
     Activity,
     User,
-    LogOut
+    LogOut,
+    Check
 } from 'lucide-react';
-
+import BottomNavigation from './components/BottomNavigation';
 import { db, auth } from './firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -276,46 +277,12 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            {/* Navigation (Fixed Bottom) */}
-            <nav className={`fixed bottom-0 left-0 right-0 z-[110] border-t px-6 pb-6 pt-3 ${isDarkMode ? 'bg-[#1F2128]/95 backdrop-blur-md border-gray-800/60' : 'bg-white/95 backdrop-blur-md border-gray-200/60'}`}>
-                <div className="max-w-[440px] mx-auto flex justify-between items-end px-4 relative">
-
-                    <button className="flex flex-col items-center gap-1.5 text-[#FF1F40] w-12 transition-transform active:scale-90">
-                        <Home size={26} strokeWidth={2.5} />
-                        <span className="text-[10px] font-bold tracking-wide">Inicio</span>
-                    </button>
-
-                    <button
-                        onClick={() => navigate('/agenda')}
-                        className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}
-                    >
-                        <Calendar size={26} strokeWidth={2} />
-                        <span className="text-[10px] font-bold tracking-wide">Agenda</span>
-                    </button>
-
-                    {/* Central Plus Button - PERFECTLY CENTERED */}
-                    <div className="relative -top-8">
-                        <button
-                            onClick={() => setShowMenu(!showMenu)}
-                            className={`w-16 h-16 bg-[#FF1F40] rounded-full flex items-center justify-center text-white border-[6px] shadow-2xl shadow-red-900/50 active:scale-95 transition-all group ${isDarkMode ? 'border-[#1F2128]' : 'border-gray-100'
-                                } ${showMenu ? 'rotate-45' : 'rotate-0'}`}
-                        >
-                            <Plus size={36} strokeWidth={4} />
-                        </button>
-                    </div>
-
-                    <button className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
-                        <MessageSquare size={26} strokeWidth={2} />
-                        <span className="text-[10px] font-bold tracking-wide">Mensajes</span>
-                    </button>
-
-                    <button className={`flex flex-col items-center gap-1.5 w-12 transition-all active:scale-90 ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}>
-                        <Settings size={26} strokeWidth={2} />
-                        <span className="text-[10px] font-bold tracking-wide">Ajustes</span>
-                    </button>
-
-                </div>
-            </nav>
+            <BottomNavigation
+                role="admin"
+                activeTab="home"
+                onFabClick={() => setShowMenu(!showMenu)}
+                showMenu={showMenu}
+            />
         </div>
     );
 };
