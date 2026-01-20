@@ -211,11 +211,9 @@ const UserDashboard = () => {
         status: 'confirmed'
       });
 
-      // 2. Increment Class Capacity
-      const classRef = doc(db, 'classes', classId);
-      await updateDoc(classRef, {
-        currentCapacity: increment(1)
-      });
+      // 2. DO NOT Increment Class Capacity
+      // Logic: The spot was "held" (not decremented) when the previous user canceled.
+      // So we just confirm the seat.
 
       setPendingPromotion(null);
       alert("¡Plaza confirmada! Nos vemos en clase.");
@@ -239,21 +237,13 @@ const UserDashboard = () => {
       const reservationDoc = snapshot.docs[0];
       const status = reservationDoc.data().status || 'confirmed';
 
-      // 2. Delete reservation
+      // 2. Delete reservation (FREES THE USER, BUT MAYBE NOT THE SPOT YET)
       await deleteDoc(reservationDoc.ref);
 
       // 3. Logic: If it was 'confirmed', we opened a spot. Check Waitlist.
       if (status === 'confirmed') {
-        // Decrement capacity update (temporarily, until someone takes it? or immediately?)
-        // Requirement: "propose to first reserve".
-        // So we effectively decrement capacity, OR we assign it to the pending user.
-        // To avoid race conditions, let's decrement first. 
-        const classRef = doc(db, 'classes', classId);
-        await updateDoc(classRef, {
-          currentCapacity: increment(-1)
-        });
 
-        // 4. FIND NEXT IN WAITLIST
+        // 4. FIND NEXT IN WAITLIST FIRST
         const wq = query(
           collection(db, 'reservations'),
           where('classId', '==', classId),
@@ -264,17 +254,24 @@ const UserDashboard = () => {
         const waitlistSnap = await getDocs(wq);
 
         if (!waitlistSnap.empty) {
+          // STRICT PRIORITY: DO NOT DECREMENT CAPACITY
+          // The spot stays "Full" in the counter, preventing snipers.
+          // We assign this "ghost spot" to the next user.
+
           const nextUser = waitlistSnap.docs[0];
-          // Promote to 'pending_confirmation'
-          // We DO NOT increment capacity yet. They must accept.
           await updateDoc(nextUser.ref, {
             status: 'pending_confirmation',
             promotedAt: new Date().toISOString()
           });
-          // Here we would send Push Notification via backend. 
-          // Since we are client-side only, the 'pending_confirmation' status update 
-          // will trigger the UI alert for that user when they login.
+          // Notification: In-App alert will appear for this user.
+        } else {
+          // NO WAITLIST: FREE THE SPOT GLOBALLY
+          const classRef = doc(db, 'classes', classId);
+          await updateDoc(classRef, {
+            currentCapacity: increment(-1)
+          });
         }
+
       } else {
         // If it was 'waitlist' or 'pending', just removed. No capacity change needed.
         // If 'pending', we might want to trigger next in line? Yes.
@@ -292,6 +289,13 @@ const UserDashboard = () => {
             await updateDoc(waitlistSnap.docs[0].ref, {
               status: 'pending_confirmation',
               promotedAt: new Date().toISOString()
+            });
+          } else {
+            // If NO ONE else in waitlist, and a PENDING user cancels, 
+            // we MUST decrement capacity because that held spot is now truly free.
+            const classRef = doc(db, 'classes', classId);
+            await updateDoc(classRef, {
+              currentCapacity: increment(-1)
             });
           }
         }
