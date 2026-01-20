@@ -14,8 +14,7 @@ import {
     Home,
     Plus,
     Users,
-    MessageSquare,
-    Settings // Changed from LogOut to Settings as per instruction's snippet
+    MessageSquare
 } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
 import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
