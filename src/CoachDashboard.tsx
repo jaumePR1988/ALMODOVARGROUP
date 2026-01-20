@@ -7,6 +7,7 @@ import {
     Calendar,
     Settings,
     User,
+    Users,
     MapPin,
     Activity,
     Home
