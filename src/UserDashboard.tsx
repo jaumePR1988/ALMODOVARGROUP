@@ -551,23 +551,51 @@ const UserDashboard = () => {
                       </div>
 
                       <button
-                        onClick={() => handleReserve(item.id, item.currentCapacity, item.maxCapacity)}
-                        disabled={isReserved || isFull}
+                        onClick={() => {
+                          if (isReserved && reservationStatus !== 'pending_confirmation') {
+                            handleCancel(item.id);
+                          } else if (reservationStatus === 'pending_confirmation') {
+                            if (pendingPromotion) {
+                              handleAcceptPromotion(pendingPromotion.id, item.id);
+                            }
+                          } else {
+                            handleReserve(item.id, item.currentCapacity, item.maxCapacity);
+                          }
+                        }}
                         className={`
                                   px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg
-                                  ${isReserved
-                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed shadow-none'
-                            : isFull
-                              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed shadow-none'
-                              : 'bg-green-500 text-white shadow-green-900/20 hover:scale-105 active:scale-95 hover:brightness-110'}
+                                  ${reservationStatus === 'confirmed'
+                            ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-900/20' // Botón Cancelar (Rojo)
+                            : reservationStatus === 'waitlist'
+                              ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-orange-900/20' // Botón Lista Espera (Naranja)
+                              : reservationStatus === 'pending_confirmation'
+                                ? 'bg-green-500 animate-pulse text-white' // Botón Confirmar (Verde Parpadeante)
+                                : isFull
+                                  ? 'bg-yellow-500 text-white shadow-yellow-900/20' // Botón Unirse Cola (Amarillo)
+                                  : 'bg-green-500 text-white shadow-green-900/20 hover:scale-105 active:scale-95 hover:brightness-110'} // Botón Reservar (Verde)
                                 `}
                       >
-                        {isReserved ? (
+                        {reservationStatus === 'confirmed' ? (
+                          <div className="flex items-center gap-2">
+                            <LogOut size={14} strokeWidth={3} />
+                            CANCELAR
+                          </div>
+                        ) : reservationStatus === 'waitlist' ? (
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} strokeWidth={3} />
+                            EN COLA (SALIR)
+                          </div>
+                        ) : reservationStatus === 'pending_confirmation' ? (
                           <div className="flex items-center gap-2">
                             <Check size={14} strokeWidth={3} />
-                            RESERVADO
+                            CONFIRMAR PLAZA
                           </div>
-                        ) : (isFull ? 'LLENO' : 'RESERVAR PLAZA')}
+                        ) : isFull ? (
+                          <div className="flex items-center gap-2">
+                            <Activity size={14} strokeWidth={3} />
+                            UNIRSE A COLA
+                          </div>
+                        ) : 'RESERVAR PLAZA'}
                       </button>
                     </div>
                   </div>
