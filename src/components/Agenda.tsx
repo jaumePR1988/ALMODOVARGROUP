@@ -62,6 +62,7 @@ const Agenda = () => {
 
     // 3. Fetch Classes
     useEffect(() => {
+        console.log("Agenda: Fetching classes...", selectedGroup, selectedDate);
         const q = query(
             collection(db, 'classes'),
             where('group', '==', selectedGroup),
@@ -72,14 +73,34 @@ const Agenda = () => {
             let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
             // Client-side date filter (Firestore string filtering can be tricky with ISO)
-            const activeDay = weekDays.find(d => d.date === selectedDate);
-            if (activeDay) {
-                data = data.filter((c: any) => c.date === activeDay.fullDate);
+            // Just filter by the string match we generated
+            // Re-calculating activeDay here to avoid 'weekDays' dependency if possible, or just strict filter
+            // Ideally 'selectedDate' (string 10, 11) is enough if we know the current month/ISO
+            // But let's keep it simple: MATCH FULL DATE from the weekDays object logic
+
+            // We need to match 'selectedDate' (e.g. "24") to the actual fullDate
+            // Let's re-derive it to be safe and avoid 'weekDays' dependency causing loops
+            const today = new Date();
+            // This logic must match the week generation exactly
+            // Find which day offset matches the selectedDate
+            let targetFullDate = "";
+            for (let i = 0; i < 7; i++) {
+                const d = new Date();
+                d.setDate(today.getDate() + i);
+                if (d.getDate().toString() === selectedDate) {
+                    targetFullDate = d.toISOString().split('T')[0];
+                    break;
+                }
             }
+
+            if (targetFullDate) {
+                data = data.filter((c: any) => c.date === targetFullDate);
+            }
+            console.log("Agenda: Classes found", data.length);
             setClassList(data);
         });
         return () => unsubscribe();
-    }, [selectedGroup, selectedDate, weekDays]);
+    }, [selectedGroup, selectedDate]); // Removed weekDays from dependency to prevent loops
 
     // 4. Fetch Reservations (for button status)
     useEffect(() => {
