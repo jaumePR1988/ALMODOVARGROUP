@@ -3,21 +3,34 @@ import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, orderBy } fro
 import { db } from '../firebase';
 import {
     Users, UserCheck, Trash2, Search,
-    ChevronRight, LayoutGrid, List, Phone, Calendar, Mail, Loader2
+    ChevronRight, LayoutGrid, List, Phone, Calendar, Mail, Loader2, ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import TopHeader from './TopHeader';
 
 const AdminUsersList = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filter, setFilter] = useState<'all' | 'pending' | 'active'>('all');
+    const [filter, setFilter] = useState<'all' | 'pending' | 'active' | 'new'>('all');
     const [isLoading, setIsLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
     const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
     useEffect(() => {
-        const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    setIsDarkMode(document.documentElement.classList.contains('dark'));
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const q = query(collection(db, 'users'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const usersData = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -83,65 +96,47 @@ const AdminUsersList = () => {
     const filteredUsers = users.filter(u => {
         const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             u.email?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesFilter = filter === 'all' ||
+
+        let matchesFilter = filter === 'all' ||
             (filter === 'pending' && !u.isApproved) ||
             (filter === 'active' && u.isApproved);
+
+        if (filter === 'new') {
+            const oneDayAgo = new Date();
+            oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+            const createdAt = u.createdAt?.toDate ? u.createdAt.toDate() : (u.createdAt ? new Date(u.createdAt) : new Date());
+            matchesFilter = createdAt > oneDayAgo;
+        }
+
         return matchesSearch && matchesFilter;
     });
 
     const pendingCount = users.filter(u => !u.isApproved).length;
 
     return (
-        <div className="min-h-screen bg-[#1F2128] text-white p-4 md:p-8 pb-32">
-            {/* Header */}
-            <div className="max-w-7xl mx-auto mb-10">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-[#FF1F40] rounded-xl flex items-center justify-center shadow-lg shadow-red-900/20">
-                                <Users size={20} className="text-white" />
-                            </div>
-                            <h1 className="text-3xl font-black italic uppercase italic tracking-tight">Gestión <span className="text-[#FF1F40]">Usuarios</span></h1>
-                        </div>
-                        <p className="text-gray-400 font-medium">Administra los accesos, roles y planes de los alumnos.</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="bg-[#2A2D3A] p-1 rounded-xl flex">
-                            <button
-                                onClick={() => setViewMode('list')}
-                                className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-[#FF1F40] text-white shadow-md' : 'text-gray-500'}`}
-                            >
-                                <List size={20} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('grid')}
-                                className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-[#FF1F40] text-white shadow-md' : 'text-gray-500'}`}
-                            >
-                                <LayoutGrid size={20} />
-                            </button>
-                        </div>
-                        <button
-                            onClick={() => navigate('/admin')}
-                            className="px-6 py-3 bg-[#2A2D3A] rounded-xl font-bold hover:bg-[#323645] transition-all text-sm"
-                        >
-                            Volver
-                        </button>
-                    </div>
-                </div>
+        <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32`}>
+            {/* Header Unificado */}
+            <div className="max-w-7xl mx-auto">
+                <TopHeader
+                    title="Usuarios"
+                    subtitle={`${users.length} Registrados • Gestión Administrativa`}
+                    onBack={() => navigate('/admin')}
+                    showNotificationDot={pendingCount > 0}
+                />
             </div>
 
             {/* Stats / Quick Filters */}
             <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <button
                     onClick={() => setFilter('all')}
-                    className={`p-6 rounded-[2rem] border-2 transition-all text-left ${filter === 'all' ? 'border-[#FF1F40] bg-[#FF1F40]/5' : 'border-white/5 bg-[#2A2D3A]'}`}
+                    className={`p-6 rounded-[2rem] border-2 transition-all text-left ${filter === 'all' ? 'border-[#FF1F40] bg-[#FF1F40]/5' : isDarkMode ? 'border-white/5 bg-[#2A2D3A]' : 'border-gray-200 bg-white shadow-sm'}`}
                 >
                     <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Usuarios</div>
                     <div className="text-2xl font-black">{users.length}</div>
                 </button>
                 <button
                     onClick={() => setFilter('pending')}
-                    className={`p-6 rounded-[2rem] border-2 transition-all text-left relative overflow-hidden ${filter === 'pending' ? 'border-yellow-500 bg-yellow-500/5' : 'border-white/5 bg-[#2A2D3A]'}`}
+                    className={`p-6 rounded-[2rem] border-2 transition-all text-left relative overflow-hidden ${filter === 'pending' ? 'border-yellow-500 bg-yellow-500/5' : isDarkMode ? 'border-white/5 bg-[#2A2D3A]' : 'border-gray-200 bg-white shadow-sm'}`}
                 >
                     {pendingCount > 0 && (
                         <div className="absolute top-4 right-4 bg-yellow-500 text-black text-[10px] font-black px-2 py-1 rounded-full animate-pulse">
@@ -153,7 +148,7 @@ const AdminUsersList = () => {
                 </button>
                 <button
                     onClick={() => setFilter('active')}
-                    className={`p-6 rounded-[2rem] border-2 transition-all text-left ${filter === 'active' ? 'border-green-500 bg-green-500/5' : 'border-white/5 bg-[#2A2D3A]'}`}
+                    className={`p-6 rounded-[2rem] border-2 transition-all text-left ${filter === 'active' ? 'border-green-500 bg-green-500/5' : isDarkMode ? 'border-white/5 bg-[#2A2D3A]' : 'border-gray-200 bg-white shadow-sm'}`}
                 >
                     <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Usuarios Activos</div>
                     <div className="text-2xl font-black text-green-500">{users.filter(u => u.isApproved).length}</div>
@@ -169,7 +164,7 @@ const AdminUsersList = () => {
                         placeholder="Buscar por nombre o email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[#2A2D3A] border border-white/5 py-4 pl-12 pr-4 rounded-2xl outline-none focus:border-[#FF1F40]/50 transition-all font-medium"
+                        className={`w-full ${isDarkMode ? 'bg-[#2A2D3A] border-white/5' : 'bg-white border-gray-200 shadow-sm'} py-4 pl-12 pr-4 rounded-2xl outline-none focus:border-[#FF1F40]/50 transition-all font-medium`}
                     />
                 </div>
             </div>
@@ -182,17 +177,17 @@ const AdminUsersList = () => {
                         <p className="font-bold uppercase tracking-widest text-xs">Cargando usuarios...</p>
                     </div>
                 ) : filteredUsers.length === 0 ? (
-                    <div className="text-center py-20 bg-[#2A2D3A] rounded-[2.5rem] border border-dashed border-white/10">
+                    <div className={`text-center py-20 ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} rounded-[2.5rem] border border-dashed ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
                         <Users size={48} className="mx-auto text-gray-600 mb-4" />
                         <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">No se encontraron usuarios</p>
                     </div>
                 ) : (
-                    <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredUsers.map((user) => (
                             <UserCard
                                 key={user.id}
                                 user={user}
-                                isList={viewMode === 'list'}
+                                isList={false}
                                 onApprove={() => handleApprove(user.id)}
                                 onUpdateRole={(role: string) => handleUpdateRole(user.id, role)}
                                 onUpdatePlan={(plan: string) => handleUpdatePlan(user.id, plan)}
@@ -204,6 +199,7 @@ const AdminUsersList = () => {
                                     handleDeleteUser(user.id);
                                     setUserToDelete(null);
                                 }}
+                                isDarkMode={isDarkMode}
                             />
                         ))}
                     </div>
@@ -211,21 +207,21 @@ const AdminUsersList = () => {
             </div>
 
             {/* Bottom Actions Floating (Mobile) */}
-            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#2A2D3A]/80 backdrop-blur-xl p-2 rounded-full border border-white/10 shadow-2xl z-[100] md:hidden">
+            <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 ${isDarkMode ? 'bg-[#2A2D3A]/80' : 'bg-white/80'} backdrop-blur-xl p-2 rounded-full border ${isDarkMode ? 'border-white/10' : 'border-gray-200'} shadow-2xl z-[100] md:hidden`}>
                 <button
                     onClick={() => navigate('/admin')}
                     className="w-12 h-12 rounded-full bg-[#FF1F40] text-white flex items-center justify-center shadow-lg"
                 >
-                    <ChevronRight className="rotate-180" size={20} />
+                    <ArrowLeft size={20} className="rotate-0" />
                 </button>
             </div>
         </div>
     );
 };
 
-const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdateGroup, onDelete, isDeleting, onCancelDelete, onConfirmDelete }: any) => {
+const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdateGroup, onDelete, isDeleting, onCancelDelete, onConfirmDelete, isDarkMode }: any) => {
     return (
-        <div className={`bg-[#2A2D3A] rounded-[2rem] border border-white/5 overflow-hidden transition-all hover:border-[#FF1F40]/30 group ${isList ? 'flex items-center p-4' : 'flex flex-col p-6'}`}>
+        <div className={`${isDarkMode ? 'bg-[#2A2D3A] border-white/5' : 'bg-white border-gray-100 shadow-sm'} rounded-[2rem] border overflow-hidden transition-all hover:border-[#FF1F40]/30 group ${isList ? 'flex items-center p-4' : 'flex flex-col p-6'}`}>
 
             {/* User Info */}
             <div className={`flex items-center gap-4 ${isList ? 'flex-1' : 'mb-6'}`}>
@@ -234,7 +230,7 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                         {user.name?.charAt(0) || '?'}
                     </div>
                     {!user.isApproved && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 border-2 border-[#1F2128] rounded-full"></div>
+                        <div className={`absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 border-2 ${isDarkMode ? 'border-[#1F2128]' : 'border-white'} rounded-full`}></div>
                     )}
                 </div>
                 <div>
@@ -278,12 +274,12 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
             {!isList && (
                 <div className="space-y-4 mb-6">
                     <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-[#1F2128] p-3 rounded-xl border border-white/5">
+                        <div className={`${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'} p-3 rounded-xl border`}>
                             <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Rol</p>
                             <select
                                 value={user.role || 'client'}
                                 onChange={(e) => onUpdateRole(e.target.value)}
-                                className="w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40]"
+                                className={`w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40] ${isDarkMode ? '' : '[&>option]:text-gray-900'}`}
                             >
                                 <option value="client">Cliente</option>
                                 <option value="coach">Coach</option>
@@ -291,12 +287,12 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                             </select>
                         </div>
                         {user.role !== 'admin' && (
-                            <div className="bg-[#1F2128] p-3 rounded-xl border border-white/5">
+                            <div className={`${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'} p-3 rounded-xl border`}>
                                 <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Plan</p>
                                 <select
                                     value={user.plan || ''}
                                     onChange={(e) => onUpdatePlan(e.target.value)}
-                                    className="w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40]"
+                                    className={`w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40] ${isDarkMode ? '' : '[&>option]:text-gray-900'}`}
                                 >
                                     <option value="">Sin Plan</option>
                                     <option value="Mancuerna">Mancuerna (2)</option>
@@ -306,12 +302,12 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                         )}
                     </div>
                     {user.role !== 'admin' && (
-                        <div className="bg-[#1F2128] p-3 rounded-xl border border-white/5">
+                        <div className={`${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'} p-3 rounded-xl border`}>
                             <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Grupo</p>
                             <select
                                 value={user.group || ''}
                                 onChange={(e) => onUpdateGroup(e.target.value)}
-                                className="w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40]"
+                                className={`w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40] ${isDarkMode ? '' : '[&>option]:text-gray-900'}`}
                             >
                                 <option value="">Sin Grupo</option>
                                 <option value="AlmodovarBOX">Almodóvar BOX</option>
@@ -357,11 +353,11 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                             </button>
                         ) : isList ? (
                             <div className="flex items-center gap-2">
-                                <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                <div className={`${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'} px-3 py-2 rounded-xl border`}>
                                     <select
                                         value={user.role || 'client'}
                                         onChange={(e) => onUpdateRole(e.target.value)}
-                                        className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                        className={`bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40] ${isDarkMode ? '' : '[&>option]:text-gray-900'}`}
                                     >
                                         <option value="client">Cliente</option>
                                         <option value="coach">Coach</option>
@@ -370,22 +366,22 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                                 </div>
                                 {user.role !== 'admin' && (
                                     <>
-                                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                        <div className={`${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'} px-3 py-2 rounded-xl border`}>
                                             <select
                                                 value={user.plan || ''}
                                                 onChange={(e) => onUpdatePlan(e.target.value)}
-                                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                                className={`bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40] ${isDarkMode ? '' : '[&>option]:text-gray-900'}`}
                                             >
                                                 <option value="">Sin Plan</option>
                                                 <option value="Mancuerna">Mancuerna</option>
                                                 <option value="Burpees">Burpees</option>
                                             </select>
                                         </div>
-                                        <div className="bg-[#1F2128] px-3 py-2 rounded-xl border border-white/5">
+                                        <div className={`${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-50 border-gray-100'} px-3 py-2 rounded-xl border`}>
                                             <select
                                                 value={user.group || ''}
                                                 onChange={(e) => onUpdateGroup(e.target.value)}
-                                                className="bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40]"
+                                                className={`bg-transparent text-[10px] font-black uppercase italic outline-none text-[#FF1F40] ${isDarkMode ? '' : '[&>option]:text-gray-900'}`}
                                             >
                                                 <option value="">Sin Grupo</option>
                                                 <option value="AlmodovarBOX">BOX</option>

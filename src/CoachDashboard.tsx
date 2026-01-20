@@ -6,24 +6,19 @@ import {
     Moon,
     Calendar,
     Settings,
-    ClipboardList,
     User,
-    Zap,
     MapPin,
     Activity,
-    Home,
-    Plus,
-    Users,
-    MessageSquare
+    Home
 } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
-import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
-import { auth, db } from './firebase'; // Ensure db is imported if needed, otherwise just auth
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import TopHeader from './components/TopHeader';
+import { collection, onSnapshot, query, where, orderBy, limit, getDocs, getDoc, doc } from 'firebase/firestore';
+import { auth, db } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const CoachDashboard = () => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-    const [showMenu, setShowMenu] = useState(false);
     const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
     const [stats, setStats] = useState({ totalClasses: 0, totalStudents: 0 });
     const navigate = useNavigate();
@@ -71,6 +66,8 @@ const CoachDashboard = () => {
         return () => unsubscribe();
     }, [user]);
 
+    const [classAttendees, setClassAttendees] = useState<{ [key: string]: string[] }>({});
+
     // Fetch assigned classes using Coach Profile ID
     useEffect(() => {
         if (!coachProfileId) return;
@@ -80,18 +77,15 @@ const CoachDashboard = () => {
             collection(db, 'classes'),
             where('coachId', '==', coachProfileId),
             where('date', '==', today)
-            // orderBy removed to avoid Index issues. Sorting client-side.
         );
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            let classesData: any[] = querySnapshot.docs.map(doc => ({
+        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+            const classesData: any[] = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
 
-            // Client-side sort
-            classesData.sort((a, b) => a.startTime.localeCompare(b.startTime));
-
+            classesData.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
             setAssignedClasses(classesData);
 
             // Calculate stats
@@ -100,75 +94,46 @@ const CoachDashboard = () => {
                 totalClasses: classesData.length,
                 totalStudents
             });
+
+            // Fetch top avatars for each class
+            const attendeesMap: { [key: string]: string[] } = {};
+            for (const cls of classesData) {
+                const resQ = query(
+                    collection(db, 'reservations'),
+                    where('classId', '==', cls.id),
+                    limit(3)
+                );
+                const resSnap = await getDocs(resQ);
+                const avatars: string[] = [];
+                for (const resDoc of resSnap.docs) {
+                    const resData = resDoc.data();
+                    const userSnap = await getDoc(doc(db, 'users', resData.userId));
+                    if (userSnap.exists()) {
+                        avatars.push(userSnap.data().photoURL || '');
+                    }
+                }
+                attendeesMap[cls.id] = avatars;
+            }
+            setClassAttendees(attendeesMap);
         });
 
         return () => unsubscribe();
     }, [coachProfileId]);
 
-    const toggleTheme = () => {
-        const newDarkMode = !isDarkMode;
-        setIsDarkMode(newDarkMode);
-        if (newDarkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    };
+    // Redundant theme/logout removed (now in TopHeader)
 
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            navigate('/');
-        } catch (error) {
-            console.error("Error signing out:", error);
-        }
-    };
 
-    // Menu Items for Coach
-    const menuItems = [
-        { icon: <ClipboardList size={22} />, label: 'Asistencia' },
-        { icon: <Zap size={22} />, label: 'WOD' },
-        { icon: <Activity size={22} />, label: '+Ejercicio' },
-        { icon: <User size={22} />, label: 'Perfil' },
-    ];
 
     return (
         <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
 
-                {/* Header */}
-                <header className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-[#FF1F40] flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-red-600/20">
-                            AG
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold leading-tight">Coach Panel</h1>
-                            <p className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Hola, {user?.displayName || 'Coach'} 👋</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={toggleTheme}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-colors ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600'}`}
-                        >
-                            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm transition-colors ${isDarkMode ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white'}`}
-                        >
-                            <LogOut size={20} />
-                        </button>
-                        <button
-                            onClick={() => navigate('/notifications')}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center relative shadow-sm transition-colors ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600'}`}
-                        >
-                            <Bell size={20} />
-                            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#FF1F40] rounded-full border-2 border-transparent"></span>
-                        </button>
-                    </div>
-                </header>
+                {/* Header Unificado */}
+                <TopHeader
+                    title="Coach Panel"
+                    subtitle={`Hola, ${user?.displayName || 'Coach'} 👋`}
+                    showNotificationDot={false}
+                />
 
                 {/* Removed Debug Panel */}
 
@@ -250,14 +215,22 @@ const CoachDashboard = () => {
                                     <div className="flex items-center justify-between pt-2 border-t border-gray-100/10 dark:border-white/5">
                                         <div className="flex items-center gap-4">
                                             <div className="flex -space-x-2">
-                                                {[1, 2, 3].map(i => (
-                                                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-[#2A2D3A] overflow-hidden">
-                                                        <img src={`https://i.pravatar.cc/150?u=${i + item.id}`} alt="user" className="w-full h-full object-cover" />
+                                                {(classAttendees[item.id] || []).map((url, i) => (
+                                                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-[#2A2D3A] overflow-hidden bg-gray-100">
+                                                        {url ? (
+                                                            <img src={url} alt="user" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                                                <User size={10} className="text-gray-400" />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
-                                                <div className="w-6 h-6 rounded-full border-2 border-white dark:border-[#2A2D3A] bg-gray-100 dark:bg-[#1F2128] flex items-center justify-center text-[8px] font-bold text-gray-500">
-                                                    +{item.currentCapacity > 3 ? item.currentCapacity - 3 : 0}
-                                                </div>
+                                                {item.currentCapacity > (classAttendees[item.id]?.length || 0) && (
+                                                    <div className="w-6 h-6 rounded-full border-2 border-white dark:border-[#2A2D3A] bg-gray-100 dark:bg-[#1F2128] flex items-center justify-center text-[8px] font-bold text-gray-500">
+                                                        +{item.currentCapacity - (classAttendees[item.id]?.length || 0)}
+                                                    </div>
+                                                )}
                                             </div>
                                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{item.currentCapacity} Registrados</span>
                                         </div>
@@ -276,50 +249,11 @@ const CoachDashboard = () => {
 
             </div>
 
-            {/* Action Menu (Medialuna) Overlay */}
-            {showMenu && (
-                <div
-                    className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] transition-all duration-500"
-                    onClick={() => setShowMenu(false)}
-                >
-                    <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-none">
-                        {menuItems.map((item, i) => {
-                            const totalItems = menuItems.length;
-                            const angleRange = 140;
-                            const startAngle = 160;
-                            const angle = startAngle - (i * (angleRange / (totalItems - 1)));
-                            const radius = 110;
-                            const x = radius * Math.cos((angle * Math.PI) / 180);
-                            const y = radius * Math.sin((angle * Math.PI) / 180);
 
-                            return (
-                                <button
-                                    key={i}
-                                    className="absolute left-1/2 bottom-0 -translate-x-1/2 w-16 h-16 bg-white dark:bg-[#2A2D3A] rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 pointer-events-auto active:scale-90 transition-all duration-300 border border-gray-100 dark:border-gray-700/50 group hover:shadow-[0_0_20px_rgba(255,31,64,0.4)] hover:border-[#FF1F40] hover:scale-110"
-                                    style={{
-                                        transform: `translate(calc(-50% + ${x}px), -${y}px)`,
-                                        opacity: showMenu ? 1 : 0,
-                                        transitionDelay: `${i * 50}ms`
-                                    }}
-                                >
-                                    <div className="text-gray-400 dark:text-gray-500 group-hover:text-[#FF1F40] transition-colors duration-300">
-                                        {item.icon}
-                                    </div>
-                                    <span className="text-[7px] font-black uppercase tracking-tighter text-gray-500 dark:text-gray-400 group-hover:text-[#FF1F40] transition-colors duration-300">
-                                        {item.label}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
 
             <BottomNavigation
                 role="coach"
                 activeTab="home"
-                onFabClick={() => setShowMenu(!showMenu)}
-                showMenu={showMenu}
             />
         </div>
     );

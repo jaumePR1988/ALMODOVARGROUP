@@ -13,6 +13,7 @@ import {
     Check,
     Loader2
 } from 'lucide-react';
+import TopHeader from './TopHeader';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 
@@ -279,19 +280,14 @@ const CreateClass = () => {
 
     return (
         <div className={`min-h-screen transition-colors duration-500 pb-20 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
-            {/* Header */}
-            <header className={`sticky top-0 z-[200] px-6 py-5 flex items-center justify-between backdrop-blur-md ${isDarkMode ? 'bg-[#1F2128]/80' : 'bg-white/80'}`}>
-                <button
-                    onClick={() => navigate(-1)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}
-                >
-                    <ChevronLeft size={24} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
-                </button>
-                <h1 className={`text-sm font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {isEditMode ? 'Editar Clase' : 'Nueva Clase'}
-                </h1>
-                <div className="w-10"></div>
-            </header>
+            {/* Header Unificado */}
+            <div className="max-w-md mx-auto px-6 pt-6">
+                <TopHeader
+                    title={isEditMode ? 'Editar' : 'Nueva'}
+                    subtitle="Sesión de Entrenamiento"
+                    onBack={() => navigate(-1)}
+                />
+            </div>
 
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
                 {/* Cover Image Upload */}

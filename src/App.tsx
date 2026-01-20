@@ -52,6 +52,8 @@ import CreateClass from './components/CreateClass';
 import ManageCoaches from './components/ManageCoaches';
 import CreateCoach from './components/CreateCoach';
 import AdminUsersList from './components/AdminUsersList';
+import AdminGroupsList from './components/AdminGroupsList';
+import AttendanceList from './components/AttendanceList';
 import Agenda from './components/Agenda';
 
 const AppContent = () => {
@@ -147,7 +149,10 @@ const AppContent = () => {
       <Route path="/edit-class/:classId" element={<CreateClass />} />
       <Route path="/manage-coaches" element={<ManageCoaches />} />
       <Route path="/create-coach" element={<CreateCoach />} />
+      <Route path="/edit-coach/:coachId" element={<CreateCoach />} />
+      <Route path="/manage-attendance/:classId" element={<AttendanceList />} />
       <Route path="/manage-users" element={<AdminUsersList />} />
+      <Route path="/manage-groups" element={<AdminGroupsList />} />
       <Route path="/agenda" element={<Agenda />} />
       {/* Dev Switch */}
       <Route path="/switch" element={<DevSwitch onLogout={handleLogout} />} />

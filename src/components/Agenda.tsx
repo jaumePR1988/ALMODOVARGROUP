@@ -6,12 +6,25 @@ import {
     ArrowLeft
 } from 'lucide-react';
 import BottomNavigation from './BottomNavigation';
+import TopHeader from './TopHeader';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy, where, doc, getDoc, addDoc, updateDoc, increment, deleteDoc, getDocs, limit } from 'firebase/firestore';
 
 const Agenda = () => {
     const navigate = useNavigate();
-    const [isDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+
+    useEffect(() => {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'class') {
+                    setIsDarkMode(document.documentElement.classList.contains('dark'));
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+        return () => observer.disconnect();
+    }, []);
 
     // State
     const [weekDays, setWeekDays] = useState<{ day: string; date: string; fullDate: string; active: boolean }[]>([]);
@@ -153,7 +166,7 @@ const Agenda = () => {
 
             if (status === 'confirmed') {
                 // Check Waitlist Logic
-                const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), orderBy('reservedAt', 'asc'), limit(1));
+                const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), limit(1));
                 const wSnap = await getDocs(wq);
                 if (!wSnap.empty) {
                     await updateDoc(wSnap.docs[0].ref, { status: 'pending_confirmation', promotedAt: new Date().toISOString() });
@@ -161,7 +174,7 @@ const Agenda = () => {
                     await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(-1) });
                 }
             } else if (status === 'pending_confirmation') {
-                const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), orderBy('reservedAt', 'asc'), limit(1));
+                const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), limit(1));
                 const wSnap = await getDocs(wq);
                 if (!wSnap.empty) {
                     await updateDoc(wSnap.docs[0].ref, { status: 'pending_confirmation', promotedAt: new Date().toISOString() });
@@ -177,16 +190,13 @@ const Agenda = () => {
         <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32`}>
             <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
 
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center active:scale-90 transition-all">
-                            <ArrowLeft size={20} />
-                        </button>
-                        <h1 className="text-2xl font-black italic uppercase">Agenda</h1>
-                    </div>
-                    <Calendar className="text-[#FF1F40]" />
-                </div>
+                {/* Header Unificado */}
+                <TopHeader
+                    title="Agenda"
+                    subtitle="Sesiones del Box"
+                    onBack={() => navigate(-1)}
+                    showNotificationDot={false}
+                />
 
                 {/* 1. Week Selector */}
                 <section>

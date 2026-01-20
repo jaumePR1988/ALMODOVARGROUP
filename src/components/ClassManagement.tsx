@@ -8,6 +8,7 @@ import {
     Clock,
     Trash2
 } from 'lucide-react';
+import TopHeader from './TopHeader';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 
@@ -90,23 +91,14 @@ const ClassManagement = () => {
 
     return (
         <div className={`min-h-screen transition-colors duration-500 pb-40 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
-            {/* Header */}
-            <header className={`sticky top-0 z-[200] px-6 py-5 flex items-center justify-between backdrop-blur-md ${isDarkMode ? 'bg-[#1F2128]/80' : 'bg-white/80'}`}>
-                <button
-                    onClick={() => navigate(-1)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}
-                >
-                    <ChevronLeft size={24} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
-                </button>
-                <h1 className={`text-sm font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Gestión de Clases
-                </h1>
-                <div className="relative">
-                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF1F40]/50 shadow-[0_0_15px_rgba(255,31,64,0.3)]">
-                        <img src="https://i.pravatar.cc/150?u=jaume" alt="User" className="w-full h-full object-cover" />
-                    </div>
-                </div>
-            </header>
+            {/* Header Unificado */}
+            <div className="max-w-md mx-auto px-6 pt-6">
+                <TopHeader
+                    title="Clases"
+                    subtitle={`Programación del Box • ${selectedDate}`}
+                    onBack={() => navigate('/admin')}
+                />
+            </div>
 
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
                 {/* Date Picker */}

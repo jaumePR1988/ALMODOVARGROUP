@@ -2,39 +2,59 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
-  Sun,
-  Moon,
   MapPin,
   Clock,
   Activity,
   Calendar,
-  Home,
-  Plus,
-  User,
   Check,
-  LogOut,
-  ChevronRight
+  Users,
+  LogOut
 } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
+import TopHeader from './components/TopHeader';
 import { db, auth } from './firebase';
-import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs, getDoc, setDoc } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
+import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs } from 'firebase/firestore';
+
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   // 1. Configuración General: Dark Mode by default
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-  const [showMenu, setShowMenu] = useState(false);
   const [weekDays, setWeekDays] = useState<{ day: string; date: string; fullDate: string; active: boolean }[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<'box' | 'fit'>('box');
+
   const [selectedDate, setSelectedDate] = useState<string>(new Date().getDate().toString());
   const [classList, setClassList] = useState<any[]>([]);
   const [nextClass, setNextClass] = useState<any>(null);
   const [userReservations, setUserReservations] = useState<{ [key: string]: string }>({}); // classId -> status
   const [pendingPromotion, setPendingPromotion] = useState<any>(null);
 
-  // Fake User ID for demo
-  const userId = "current-user-123";
+  // State for user info
+  const [currentUserData, setCurrentUserData] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        setUserId(null);
+        navigate('/login');
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const unsubscribe = onSnapshot(doc(db, 'users', userId), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setCurrentUserData(data);
+
+      }
+    });
+    return () => unsubscribe();
+  }, [userId]);
 
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
@@ -71,11 +91,13 @@ const UserDashboard = () => {
 
   // Fetch classes for Agenda
   useEffect(() => {
-    // Filter by group in query
+    const userGroups = currentUserData?.groups || (currentUserData?.group ? [currentUserData?.group] : []);
+    if (userGroups.length === 0) return;
+
+    // Filter by group in query - Support multiple groups
     const q = query(
       collection(db, 'classes'),
-      where('group', '==', selectedGroup),
-      orderBy('startTime', 'asc')
+      where('group', 'in', userGroups)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -90,45 +112,15 @@ const UserDashboard = () => {
         classesData = classesData.filter(c => c.date === activeDay.fullDate);
       }
 
-      // Fallback to mock data if empty (just to show something)
-      if (classesData.length === 0) {
-        classesData = [
-          {
-            id: 'mock-1',
-            name: 'Cross Training WOD',
-            startTime: '09:00',
-            group: 'fit',
-            date: new Date().toISOString().split('T')[0],
-            currentCapacity: 7,
-            maxCapacity: 15,
-            coachId: 'coach-marc'
-          },
-          {
-            id: 'mock-2',
-            name: 'Open Box Free',
-            startTime: '11:30',
-            group: 'box',
-            date: new Date().toISOString().split('T')[0],
-            currentCapacity: 3,
-            maxCapacity: 20,
-            coachId: 'coach-marc'
-          }
-        ];
-
-        // Filter mock data by selected group and date
-        classesData = classesData.filter(c =>
-          c.group === selectedGroup &&
-          (!activeDay || c.date === activeDay.fullDate)
-        );
-      }
+      // Sort by time
+      classesData.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
       setClassList(classesData);
     }, (error) => {
       console.error("Firestore error in UserDashboard:", error);
-      // If index is missing, it will log here
     });
     return () => unsubscribe();
-  }, [selectedGroup, selectedDate, weekDays]);
+  }, [currentUserData?.groups, currentUserData?.group, selectedDate, weekDays]);
 
   // Fetch user reservations
   useEffect(() => {
@@ -167,7 +159,7 @@ const UserDashboard = () => {
   }, []);
 
   // Handle Reservation / Waitlist / Confirmation
-  const handleReserve = async (classId: string, current: number, max: number, currentStatus?: string) => {
+  const handleReserve = async (classId: string, current: number, max: number) => {
     // If already confirmed or in queue, this button acts as Cancel (logic handled in UI usually, but double check)
     if (userReservations[classId]) {
       // The UI should call handleCancel, but just in case
@@ -206,7 +198,7 @@ const UserDashboard = () => {
   };
 
   // Accept Promotion
-  const handleAcceptPromotion = async (reservationId: string, classId: string) => {
+  const handleAcceptPromotion = async (reservationId: string) => {
     try {
       // 1. Update Reservation Status
       await updateDoc(doc(db, 'reservations', reservationId), {
@@ -308,23 +300,9 @@ const UserDashboard = () => {
     }
   };
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  // Redundant theme/logout removed (now in TopHeader)
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate('/');
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
 
-  // Placeholder Menu Items for User
-  const menuItems = [
-    { icon: <Activity size={20} />, label: 'Entrenar' },
-    { icon: <Plus size={20} />, label: 'Peso' },
-    { icon: <User size={20} />, label: 'Perfil' },
-  ];
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
@@ -345,39 +323,12 @@ const UserDashboard = () => {
         )}
 
 
-        {/* 2. Header */}
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#FF1F40] rounded-full flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-red-600/20">
-              AG
-            </div>
-            <div>
-              <h1 className="text-xl font-bold leading-tight tracking-tight">Almodovar <span className="text-[#FF1F40]">Group</span> <span className="text-[10px] opacity-30">v2.1</span></h1>
-              <p className="text-xs font-semibold text-gray-500/80 dark:text-gray-400/80">Hola, Jaume 👋</p>
-            </div>
-          </div>
-          <div className="flex gap-2.5">
-            <button
-              onClick={toggleTheme}
-              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600 border border-gray-100'}`}
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-            <button
-              onClick={handleLogout}
-              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100'}`}
-            >
-              <LogOut size={20} />
-            </button>
-            <button
-              onClick={() => navigate('/notifications')}
-              className={`w-11 h-11 rounded-full flex items-center justify-center relative shadow-sm transition-all active:scale-90 ${isDarkMode ? 'bg-[#2A2D3A] text-white' : 'bg-white text-gray-600 border border-gray-100'}`}
-            >
-              <Bell size={20} />
-              <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-[#FF1F40] rounded-full border-2 border-white dark:border-[#2A2D3A]"></span>
-            </button>
-          </div>
-        </div>
+        {/* Header Unificado */}
+        <TopHeader
+          title="Almodovar Group"
+          subtitle="v2.1 • Hola, Jaume 👋"
+          showNotificationDot={!!pendingPromotion}
+        />
 
         {/* 3. Créditos (Grid 2 col) */}
         <section className="grid grid-cols-2 gap-4">
@@ -456,41 +407,42 @@ const UserDashboard = () => {
           )}
         </section>
 
-        {/* 6. Acciones Rápidas (Grid 2 col) */}
-        <section>
-          <h2 className="text-xl font-bold mb-4 dark:text-white">Reservar nueva sesión</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setSelectedGroup('box')}
-              className={`relative h-32 rounded-3xl overflow-hidden shadow-md group transition-all ${selectedGroup === 'box' ? 'ring-4 ring-[#FF1F40]' : ''}`}
-            >
-              <img
-                src="https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=400&auto=format&fit=crop"
-                className="absolute inset-0 w-full h-full object-cover brightness-[0.4] group-hover:scale-110 transition-transform duration-500"
-                alt="Box"
-              />
-              <div className="relative z-10 flex flex-col items-center justify-center h-full">
-                <span className="text-white text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Almodovar</span>
-                <span className="text-white text-3xl font-black italic bg-[#FF1F40] px-2 -rotate-2">BOX</span>
+        {/* 6. Acciones Rápidas (Grupo Asignado) */}
+        {!currentUserData?.group ? (
+          <section className="bg-orange-500/10 border border-orange-500/20 p-6 rounded-[2.5rem] text-center">
+            <Users size={32} className="mx-auto text-orange-500 mb-3" />
+            <h2 className="text-sm font-black uppercase tracking-widest text-orange-500">Sin Grupo Asignado</h2>
+            <p className="text-[10px] text-gray-400 font-medium mt-2 leading-relaxed">
+              Contacta con administración para que te asignen a un grupo de entrenamiento.
+            </p>
+          </section>
+        ) : (
+          <section>
+            <h2 className="text-xl font-bold mb-4 dark:text-white">Tus Grupos</h2>
+            <div className="bg-[#FF1F40] p-6 rounded-[2.5rem] shadow-xl shadow-red-900/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform"></div>
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Entrenamiento Activo</p>
+                <h3 className="text-3xl font-black italic uppercase italic leading-none truncate">
+                  {currentUserData?.groups ? currentUserData.groups.join(' & ') : currentUserData?.group}
+                </h3>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center gap-4 text-white/80">
+                    <div className="flex items-center gap-1 text-[10px] font-bold">
+                      <Check size={12} />
+                      ACCESO COMPLETO
+                    </div>
+                  </div>
+                  {currentUserData?.photoURL && (
+                    <div className="w-10 h-10 rounded-full border-2 border-white/20 overflow-hidden shadow-lg">
+                      <img src={currentUserData.photoURL} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </button>
-
-            <button
-              onClick={() => setSelectedGroup('fit')}
-              className={`relative h-32 rounded-3xl overflow-hidden shadow-md group border border-gray-200 dark:border-gray-700 transition-all ${selectedGroup === 'fit' ? 'ring-4 ring-[#FF1F40]' : ''}`}
-            >
-              <img
-                src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&auto=format&fit=crop"
-                className="absolute inset-0 w-full h-full object-cover brightness-[0.4] group-hover:scale-110 transition-transform duration-500"
-                alt="Fit"
-              />
-              <div className="relative z-10 flex flex-col items-center justify-center h-full">
-                <span className="text-white text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Almodovar</span>
-                <span className="text-[#FF1F40] bg-white text-3xl font-black px-2 rotate-2">FIT</span>
-              </div>
-            </button>
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
 
         <section className="space-y-4 pb-10">
           <div className="flex justify-between items-end mb-4">
@@ -613,51 +565,11 @@ const UserDashboard = () => {
 
       </div>
 
-      {/* Action Menu (Medialuna) Overlay */}
-      {showMenu && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] transition-all duration-500"
-          onClick={() => setShowMenu(false)}
-        >
-          <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-full max-w-md pointer-events-none">
-            {menuItems.map((item, i) => {
-              const totalItems = menuItems.length;
-              const angleRange = 120;
-              const startAngle = 150;
-              const angle = startAngle - (i * (angleRange / (totalItems - 1)));
 
-              const radius = 110;
-              const x = radius * Math.cos((angle * Math.PI) / 180);
-              const y = radius * Math.sin((angle * Math.PI) / 180);
-
-              return (
-                <button
-                  key={i}
-                  className="absolute left-1/2 bottom-0 -translate-x-1/2 w-16 h-16 bg-white dark:bg-[#2A2D3A] rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 pointer-events-auto active:scale-90 transition-all duration-300 ease-out border border-gray-100 dark:border-gray-700/50 group hover:shadow-[0_0_20px_rgba(255,31,64,0.4)] hover:border-[#FF1F40] hover:scale-110"
-                  style={{
-                    transform: `translate(calc(-50% + ${x}px), -${y}px)`,
-                    opacity: showMenu ? 1 : 0,
-                    transitionDelay: `${i * 50}ms`
-                  }}
-                >
-                  <div className="text-gray-400 dark:text-gray-500 group-hover:text-[#FF1F40] transition-colors duration-300">
-                    {item.icon}
-                  </div>
-                  <span className="text-[7px] font-black uppercase tracking-tighter text-gray-500 dark:text-gray-400 group-hover:text-[#FF1F40] transition-colors duration-300">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       <BottomNavigation
         role="user"
         activeTab="home"
-        onFabClick={() => setShowMenu(!showMenu)}
-        showMenu={showMenu}
       />
     </div>
   );

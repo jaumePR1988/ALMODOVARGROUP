@@ -8,10 +8,18 @@ import {
     Mail,
     Phone,
     Trash2,
-    Edit
+    Edit,
+    Power,
+    CheckCircle2,
+    XCircle,
+    MoreVertical,
+    Activity,
+    MessageSquare,
+    PhoneCall
 } from 'lucide-react';
+import TopHeader from './TopHeader';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
 const ManageCoaches = () => {
     const navigate = useNavigate();
@@ -38,8 +46,24 @@ const ManageCoaches = () => {
     }, []);
 
     const handleDelete = async (id: string) => {
-        if (confirm('¿Estás seguro de eliminar este coach?')) {
-            await deleteDoc(doc(db, 'coaches', id));
+        if (window.confirm('¿Estás seguro de eliminar este coach? Esta acción no se puede deshacer.')) {
+            try {
+                await deleteDoc(doc(db, 'coaches', id));
+            } catch (error) {
+                console.error("Error deleting coach:", error);
+                alert("Error al eliminar coach");
+            }
+        }
+    };
+
+    const handleToggleStatus = async (coach: any) => {
+        const newStatus = coach.status === 'inactive' ? 'active' : 'inactive';
+        try {
+            await updateDoc(doc(db, 'coaches', coach.id), {
+                status: newStatus
+            });
+        } catch (error) {
+            console.error("Error toggling status:", error);
         }
     };
 
@@ -51,24 +75,14 @@ const ManageCoaches = () => {
 
     return (
         <div className={`min-h-screen transition-colors duration-500 pb-20 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
-            {/* Header */}
-            <header className={`sticky top-0 z-[50] px-6 py-5 flex items-center justify-between backdrop-blur-md ${isDarkMode ? 'bg-[#1F2128]/80' : 'bg-white/80'}`}>
-                <button
-                    onClick={() => navigate('/admin')}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}
-                >
-                    <ChevronLeft size={24} className={isDarkMode ? 'text-white' : 'text-gray-900'} />
-                </button>
-                <h1 className={`text-sm font-black uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Gestión de Coaches
-                </h1>
-                <button
-                    onClick={() => navigate('/create-coach')}
-                    className="w-10 h-10 rounded-full bg-[#FF1F40] text-white flex items-center justify-center shadow-lg shadow-red-500/30 hover:scale-105 transition-transform"
-                >
-                    <Plus size={20} strokeWidth={3} />
-                </button>
-            </header>
+            {/* Header Unificado */}
+            <div className="max-w-md mx-auto px-6 pt-6">
+                <TopHeader
+                    title="Coaches"
+                    subtitle={`Equipo Almodóvar • ${coaches.length} Activos`}
+                    onBack={() => navigate('/admin')}
+                />
+            </div>
 
             <div className="max-w-md mx-auto px-6 pt-2 space-y-6">
 
@@ -85,42 +99,92 @@ const ManageCoaches = () => {
                 </div>
 
                 {/* List */}
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-6">
                     {filteredCoaches.length === 0 ? (
-                        <div className="text-center py-10 opacity-50 space-y-2">
-                            <div className="w-16 h-16 bg-gray-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <User size={32} />
+                        <div className={`text-center py-20 rounded-[2.5rem] border-2 border-dashed ${isDarkMode ? 'border-white/5 bg-[#2A2D3A]/50' : 'border-gray-200 bg-white shadow-sm'}`}>
+                            <div className="w-20 h-20 bg-gray-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">
+                                <User size={40} />
                             </div>
-                            <p className="font-bold">No hay coaches</p>
-                            <p className="text-xs">Crea el primero pulsando el +</p>
+                            <p className="font-black uppercase tracking-widest text-sm mb-2">No hay coaches encontrados</p>
+                            <p className="text-xs text-gray-500 font-medium">Pulsa el botón superior para añadir uno nuevo</p>
                         </div>
                     ) : (
                         filteredCoaches.map((coach) => (
-                            <div key={coach.id} className={`p-4 rounded-3xl flex items-center gap-4 transition-all ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-md border border-gray-100'}`}>
-                                <div className="w-14 h-14 rounded-2xl bg-gray-200 overflow-hidden flex-shrink-0">
-                                    {coach.photoUrl ? (
-                                        <img src={coach.photoUrl} alt={coach.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-[#FF1F40]/10 text-[#FF1F40]">
-                                            <User size={24} />
+                            <div key={coach.id} className={`group relative rounded-[2.5rem] transition-all duration-300 ${isDarkMode ? 'bg-[#2A2D3A] border-white/5 hover:bg-[#323645]' : 'bg-white shadow-xl shadow-gray-200/60 border-white hover:shadow-2xl hover:shadow-gray-300/60'} border p-6`}>
+                                <div className="flex items-start gap-4">
+                                    {/* Photo with status indicator */}
+                                    <div className="relative">
+                                        <div className={`w-20 h-20 rounded-[1.5rem] overflow-hidden border-2 transition-transform group-hover:scale-105 ${isDarkMode ? 'border-white/10' : 'border-gray-100 shadow-sm'}`}>
+                                            {coach.photoUrl ? (
+                                                <img src={coach.photoUrl} alt={coach.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-[#FF1F40]/10 text-[#FF1F40]">
+                                                    <User size={32} />
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className={`font-black text-sm truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{coach.name}</h3>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                                            {coach.speciality || 'General'}
-                                        </span>
+                                        <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-lg border-2 flex items-center justify-center ${coach.status === 'inactive' ? 'bg-gray-500 border-white dark:border-[#2A2D3A]' : 'bg-green-500 border-white dark:border-[#2A2D3A] shadow-lg shadow-green-500/30'}`}>
+                                            {coach.status === 'inactive' ? <XCircle size={12} className="text-white" /> : <CheckCircle2 size={12} className="text-white" />}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className={`font-black uppercase italic text-lg leading-tight truncate tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{coach.name}</h3>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${isDarkMode ? 'bg-[#FF1F40]/10 text-[#FF1F40]' : 'bg-red-50 text-[#FF1F40]'}`}>
+                                                        {coach.speciality || 'General'}
+                                                    </span>
+                                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${isDarkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                                                        {coach.group || 'Sin Grupo'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => navigate(`/edit-coach/${coach.id}`)}
+                                                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 ${isDarkMode ? 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10' : 'bg-gray-50 text-gray-400 hover:text-gray-900'}`}
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(coach.id)}
+                                                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-90 ${isDarkMode ? 'bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-500 hover:bg-red-500 hover:text-white'}`}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 flex flex-wrap gap-3">
+                                            <div className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-gray-500/5 border border-transparent dark:border-white/5">
+                                                <Mail size={12} className="text-[#FF1F40]" />
+                                                <span className="text-[10px] font-bold text-gray-500 truncate max-w-[120px]">{coach.email}</span>
+                                            </div>
+                                            {coach.phone && (
+                                                <div className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-gray-500/5 border border-transparent dark:border-white/5">
+                                                    <Phone size={12} className="text-blue-500" />
+                                                    <span className="text-[10px] font-bold text-gray-500">{coach.phone}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => handleDelete(coach.id)}
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
+                                    <div className="flex gap-2 font-black text-[10px] italic uppercase tracking-widest text-[#FF1F40]">
+                                        <Activity size={14} />
+                                        <span>Última clase hoy</span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleToggleStatus(coach)}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${coach.status === 'inactive' ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' : 'bg-gray-500/10 text-gray-500 border dark:border-white/5'}`}
+                                    >
+                                        <Power size={12} />
+                                        {coach.status === 'inactive' ? 'Activar' : 'Desactivar'}
+                                    </button>
+                                </div>
                             </div>
                         ))
                     )}
