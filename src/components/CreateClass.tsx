@@ -5,17 +5,19 @@ import {
     Camera,
     Calendar,
     Clock,
-    User,
     Users,
     Plus,
     Minus,
     Bell,
     Check,
-    Loader2
+    Loader2,
+    Dumbbell,
+    Trash2
 } from 'lucide-react';
 import TopHeader from './TopHeader';
-import { db } from '../firebase';
+import { db, storage } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
@@ -28,20 +30,22 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
 
     // Inputs
     const [name, setName] = useState('Nueva Clase de Entrenamiento');
-    const [group, setGroup] = useState<string>(''); // Dynamic selection
+    const [group, setGroup] = useState<string>('');
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [repeatAllYear, setRepeatAllYear] = useState(false);
-    const [coachId, setCoachId] = useState(''); // Empty initially
+    const [coachId, setCoachId] = useState('');
     const [capacity, setCapacity] = useState(15);
     const [description, setDescription] = useState('');
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [wod, setWod] = useState<any[]>([]); // { exerciseId, exerciseName, sets, reps, notes }
 
     // Dynamic Data
     const [coaches, setCoaches] = useState<any[]>([]);
     const [availableGroups, setAvailableGroups] = useState<any[]>([]);
+    const [libraryExercises, setLibraryExercises] = useState<any[]>([]);
 
     // Sync theme
     useEffect(() => {
@@ -59,13 +63,22 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
             const coachesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setCoaches(coachesData);
 
-            // Set default if empty and not set and NOT in edit mode
             if (coachesData.length > 0 && !coachId && !isEditMode) {
                 setCoachId(coachesData[0].id);
             }
         });
         return () => unsubscribe();
     }, [coachId, isEditMode]);
+
+    // Fetch Exercises Library
+    useEffect(() => {
+        const q = query(collection(db, 'exercises'), orderBy('name', 'asc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setLibraryExercises(data);
+        });
+        return () => unsubscribe();
+    }, []);
 
     // Fetch Groups
     useEffect(() => {
@@ -74,7 +87,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
             const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAvailableGroups(groupsData);
 
-            // Set default group if creating and none selected
             if (groupsData.length > 0 && !group && !isEditMode) {
                 setGroup(groupsData[0].name);
             }
@@ -91,19 +103,17 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     const docRef = doc(db, 'classes', classId);
                     const docSnap = await getDoc(docRef);
                     if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        setName(data.name);
+                        const data = docSnap.data() as any;
+                        setName(data.name || '');
                         setGroup(data.group);
-                        setStartDate(data.date); // Assuming date stored as string YYYY-MM-DD
+                        setStartDate(data.date);
                         setStartTime(data.startTime);
                         setEndTime(data.endTime);
                         setCoachId(data.coachId);
                         setCapacity(data.maxCapacity);
                         setDescription(data.description || '');
                         setImagePreview(data.imageUrl);
-                        // Recurrence and selectedDays are harder to map back from a single instance,
-                        // so we might treat this as editing *this* specific class instance details mainly.
-                        // We will disable recurrence toggle for editing single instances to simplify logic/ux.
+                        setWod(data.wod || []);
                     } else {
                         alert("No se encontró la clase.");
                         navigate('/manage-classes');
@@ -148,6 +158,26 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
         }
     };
 
+    const addWodItem = (exercise: any) => {
+        setWod([...wod, {
+            exerciseId: exercise.id,
+            exerciseName: exercise.name,
+            sets: '3',
+            reps: '10',
+            notes: ''
+        }]);
+    };
+
+    const removeWodItem = (index: number) => {
+        setWod(wod.filter((_, i) => i !== index));
+    };
+
+    const updateWodItem = (index: number, field: string, value: string) => {
+        const newWod = [...wod];
+        newWod[index][field] = value;
+        setWod(newWod);
+    };
+
     const resizeImage = (base64Str: string): Promise<string> => {
         return new Promise((resolve) => {
             const img = new Image();
@@ -174,7 +204,7 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx?.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
             };
         });
     };
@@ -185,7 +215,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
             return;
         }
 
-        // Only validate days if creating new recurrent classes
         if (!isEditMode && selectedDays.length === 0 && !repeatAllYear) {
             alert("Por favor, selecciona al menos un día.");
             return;
@@ -198,44 +227,41 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
 
         setIsLoading(true);
         try {
-            // Process Image if exists (and changed/new) - optimizing to reuse if string is http
             let finalImageUrl = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80";
             if (imagePreview) {
                 if (imagePreview.startsWith('http')) {
                     finalImageUrl = imagePreview;
                 } else {
-                    finalImageUrl = await resizeImage(imagePreview);
+                    // Upload to Firebase Storage
+                    const resizedBase64 = await resizeImage(imagePreview);
+                    const storageRef = ref(storage, `classes/${Date.now()}_${name.replace(/\s+/g, '_')}.jpg`);
+                    await uploadString(storageRef, resizedBase64, 'data_url');
+                    finalImageUrl = await getDownloadURL(storageRef);
                 }
             }
 
             if (isEditMode && classId) {
-                // Update existing document
                 await updateDoc(doc(db, 'classes', classId), {
                     name,
                     group,
-                    date: startDate, // Allow changing date of this specific instance
+                    date: startDate,
                     startTime,
                     endTime,
                     coachId,
                     maxCapacity: capacity,
                     description,
                     imageUrl: finalImageUrl,
-                    // We typically don't update createdAt or status logic here simply
+                    wod
                 });
                 alert('¡Clase actualizada correctamente!');
             } else {
-                // Creation Logic (existing)
                 const startDateObj = new Date(startDate);
                 const endOfYear = new Date(startDateObj.getFullYear(), 11, 31);
-
-                // Map keys to JS day numbers
                 const dayNumMap = days.reduce((acc, d) => ({ ...acc, [d.key]: d.dayNum }), {} as Record<string, number>);
                 const targetDayNums = selectedDays.map(d => dayNumMap[d]);
-
                 const classesToCreate = [];
 
                 if (repeatAllYear) {
-                    // Generate for all year
                     let current = new Date(startDateObj);
                     while (current <= endOfYear) {
                         if (targetDayNums.includes(current.getDay())) {
@@ -250,6 +276,7 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                                 currentCapacity: 0,
                                 description,
                                 imageUrl: finalImageUrl,
+                                wod,
                                 status: 'Disponible',
                                 createdAt: serverTimestamp()
                             });
@@ -257,7 +284,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                         current.setDate(current.getDate() + 1);
                     }
                 } else {
-                    // Single day (using startDate)
                     classesToCreate.push({
                         name,
                         group,
@@ -269,12 +295,12 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                         currentCapacity: 0,
                         description,
                         imageUrl: finalImageUrl,
+                        wod,
                         status: 'Disponible',
                         createdAt: serverTimestamp()
                     });
                 }
 
-                // Save all classes in parallel
                 const batchSize = 50;
                 for (let i = 0; i < classesToCreate.length; i += batchSize) {
                     const chunk = classesToCreate.slice(i, i + batchSize);
@@ -296,7 +322,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
 
     return (
         <div className={`min-h-screen transition-colors duration-500 pb-20 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6]'}`}>
-            {/* Header Unificado */}
             <div className="max-w-md mx-auto px-6 pt-6">
                 <TopHeader
                     title={isEditMode ? 'Editar' : 'Nueva'}
@@ -307,7 +332,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
             </div>
 
             <div className="max-w-md mx-auto px-6 pt-6 space-y-8">
-                {/* Cover Image Upload */}
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Imagen de Portada</h3>
                     <label className={`aspect-video rounded-[2rem] border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all cursor-pointer overflow-hidden relative ${isDarkMode ? 'border-gray-800 bg-[#2A2D3A]/30 hover:bg-[#2A2D3A]/50' : 'border-gray-300 bg-white hover:bg-gray-50 shadow-sm'
@@ -330,7 +354,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     </label>
                 </div>
 
-                {/* Class Name */}
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Nombre de la clase</h3>
                     <input
@@ -345,7 +368,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     />
                 </div>
 
-                {/* Group Selector */}
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Grupo (Visible para...)</h3>
                     <div className="grid grid-cols-2 gap-4">
@@ -371,15 +393,9 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                                 </span>
                             </button>
                         ))}
-                        {availableGroups.length === 0 && (
-                            <p className="col-span-2 text-center text-[10px] text-gray-500 font-bold uppercase py-4">
-                                No hay grupos creados. Créalos en Gestión Grupos.
-                            </p>
-                        )}
                     </div>
                 </div>
 
-                {/* Date Selection */}
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Fecha de Inicio</h3>
                     <div className={`relative group ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-md border border-gray-100'} rounded-2xl`}>
@@ -395,7 +411,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     </div>
                 </div>
 
-                {/* Time Selection */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Hora Inicio</h3>
@@ -427,7 +442,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     </div>
                 </div>
 
-                {/* Multi-Day Selection & Recurrence */}
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Días de la semana</h3>
                     <div className={`flex justify-between items-center px-1 ${isEditMode ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
@@ -469,13 +483,12 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     )}
                 </div>
 
-                {/* Trainer & Capacity */}
                 <div className="grid grid-cols-5 gap-4">
                     <div className="col-span-3 space-y-3">
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Entrenador</h3>
                         <div className={`relative ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm'} rounded-2xl`}>
                             <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-gray-500">
-                                <User size={18} />
+                                <UserIcon size={18} className="text-gray-500" />
                             </div>
                             <select
                                 value={coachId}
@@ -488,7 +501,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                                         {coach.name} ({coach.speciality})
                                     </option>
                                 ))}
-                                {coaches.length === 0 && <option value="ana-gonzalez">Coach de Prueba (Ana)</option>}
                             </select>
                             <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-gray-400 rotate-90">
                                 <ChevronLeft size={16} />
@@ -515,7 +527,81 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     </div>
                 </div>
 
-                {/* Description */}
+                <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                        <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase italic">WOD / Entrenamiento de Hoy</h3>
+                        <span className="text-[8px] font-black text-[#FF1F40] uppercase tracking-widest">{wod.length} EJERCICIOS</span>
+                    </div>
+
+                    <div className={`p-6 rounded-[2.5rem] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'}`}>
+                        <div className="mb-6">
+                            <label className="text-[10px] font-black text-gray-400 uppercase ml-1 mb-2 block">Añadir Ejercicio de la biblioteca</label>
+                            <select
+                                onChange={(e) => {
+                                    const ex = libraryExercises.find(x => x.id === e.target.value);
+                                    if (ex) addWodItem(ex);
+                                    e.target.value = "";
+                                }}
+                                className={`w-full ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-50'} rounded-2xl px-4 py-3 outline-none border border-transparent focus:border-[#FF1F40] font-bold text-sm`}
+                            >
+                                <option value="">Seleccionar Ejercicio...</option>
+                                {libraryExercises.map(ex => (
+                                    <option key={ex.id} value={ex.id}>{ex.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-4">
+                            {wod.map((item, index) => (
+                                <div key={index} className={`p-4 rounded-2xl ${isDarkMode ? 'bg-[#1F2128]/50' : 'bg-gray-50'} border ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-lg bg-[#FF1F40]/10 flex items-center justify-center text-[#FF1F40]">
+                                                <Dumbbell size={16} />
+                                            </div>
+                                            <span className="font-black uppercase italic text-xs">{item.exerciseName}</span>
+                                        </div>
+                                        <button onClick={() => removeWodItem(index)} className="p-1 text-gray-500 hover:text-red-500 transition-colors">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label className="text-[8px] font-black text-gray-500 uppercase mb-1 block">Sets</label>
+                                            <input
+                                                value={item.sets}
+                                                onChange={e => updateWodItem(index, 'sets', e.target.value)}
+                                                className={`w-full ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} rounded-lg px-2 py-2 text-[10px] font-bold text-center outline-none border border-transparent focus:border-[#FF1F40]`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[8px] font-black text-gray-500 uppercase mb-1 block">Repes/Min</label>
+                                            <input
+                                                value={item.reps}
+                                                onChange={e => updateWodItem(index, 'reps', e.target.value)}
+                                                className={`w-full ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} rounded-lg px-2 py-2 text-[10px] font-bold text-center outline-none border border-transparent focus:border-[#FF1F40]`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[8px] font-black text-gray-500 uppercase mb-1 block">Notas</label>
+                                            <input
+                                                value={item.notes}
+                                                onChange={e => updateWodItem(index, 'notes', e.target.value)}
+                                                className={`w-full ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white'} rounded-lg px-2 py-2 text-[10px] font-bold outline-none border border-transparent focus:border-[#FF1F40]`}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {wod.length === 0 && (
+                                <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-3xl opacity-30">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Sin WOD definido</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Descripción opcional</h3>
                     <textarea
@@ -529,7 +615,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     />
                 </div>
 
-                {/* Notify Toggle */}
                 <div className={`p-6 rounded-[2rem] flex items-center justify-between ${isDarkMode ? 'bg-[#2A2D3A]/30 border border-white/5' : 'bg-white shadow-md border border-gray-100'}`}>
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-[#FF1F40]/10 flex items-center justify-center text-[#FF1F40]">
@@ -548,7 +633,6 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     </button>
                 </div>
 
-                {/* Main Publish Button - NOW AT THE END */}
                 <div className="pt-4 pb-12">
                     <button
                         onClick={handleSave}
@@ -566,12 +650,10 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
     );
 };
 
-// Helper Icon
 const UserIcon = ({ size, className }: { size: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M12 2c-3 0-5 2-5 5s2 5 5 5 5-2 5-5-2-5-5-5z" />
-        <path d="M12 14c-4 0-7 2-7 5v3h14v-3c0-3-3-5-7-5z" />
-        <path d="M12 21c-2 0-3-1-3-1" />
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
     </svg>
 );
 

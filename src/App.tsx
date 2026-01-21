@@ -19,6 +19,7 @@ import AdminUsersList from './components/AdminUsersList';
 import AdminGroupsList from './components/AdminGroupsList';
 import AttendanceList from './components/AttendanceList';
 import Agenda from './components/Agenda';
+import ExerciseLibrary from './components/ExerciseLibrary';
 
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -136,6 +137,8 @@ const AppContent = () => {
       <Route path="/manage-users" element={<AdminUsersList onLogout={handleLogout} />} />
       <Route path="/manage-groups" element={<AdminGroupsList onLogout={handleLogout} />} />
       <Route path="/agenda" element={<Agenda onLogout={handleLogout} />} />
+      <Route path="/reports" element={<div className="p-20 text-center font-black italic uppercase italic">Sección de Reports (Próximamente)</div>} />
+      <Route path="/exercise-library" element={<ExerciseLibrary />} />
       {/* Dev Switch */}
       <Route path="/switch" element={<DevSwitch onLogout={handleLogout} />} />
     </Routes>

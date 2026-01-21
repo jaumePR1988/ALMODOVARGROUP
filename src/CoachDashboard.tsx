@@ -10,8 +10,16 @@ import {
     Users,
     MapPin,
     Activity,
-    Home
+    Home,
+    FileDown,
+    Dumbbell,
+    X,
+    ChevronRight,
+    Check
 } from 'lucide-react';
+// @ts-ignore
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import BottomNavigation from './components/BottomNavigation';
 import TopHeader from './components/TopHeader';
 import { collection, onSnapshot, query, where, orderBy, limit, getDocs, getDoc, doc } from 'firebase/firestore';
@@ -25,6 +33,7 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const [user, setUser] = useState<any>(null);
     const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
+    const [selectedClassForWod, setSelectedClassForWod] = useState<any>(null); // For WOD Modal
 
     useEffect(() => {
         // Rely on App.tsx for auth state and redirection
@@ -164,6 +173,45 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
         return () => unsubscribe();
     }, [coachProfileId]);
 
+    const handleExportPDF = (classData: any) => {
+        const doc = new jsPDF();
+
+        // Header
+        doc.setFillColor(255, 31, 64);
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text("ALMODOVAR BOX", 105, 15, { align: "center" });
+        doc.setFontSize(10);
+        doc.text("CENTRO DE ALTO RENDIMIENTO", 105, 22, { align: "center" });
+        doc.text(`Sesión: ${classData.name} • ${classData.date || 'HOY'}`, 105, 30, { align: "center" });
+
+        // Meta
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(12);
+        doc.text(`Coach: ${user?.displayName || 'Coach'}`, 15, 55);
+        doc.text(`Salón: ${classData.location || 'Principal'}`, 150, 55);
+        doc.line(15, 60, 195, 60);
+
+        // Body
+        const tableData = (classData.wod || []).map((item: any) => [
+            item.exerciseName,
+            item.sets,
+            item.reps,
+            item.notes
+        ]);
+
+        (doc as any).autoTable({
+            startY: 70, head: [['EJERCICIO', 'SETS', 'REPES', 'NOTAS']], body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [255, 31, 64], textColor: [255, 255, 255] },
+            styles: { fontSize: 9 }
+        });
+
+        doc.save(`COACH_WOD_${classData.name}.pdf`);
+    };
+
     // Redundant theme/logout removed (now in TopHeader)
 
 
@@ -224,7 +272,8 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         assignedClasses.map((item) => (
                             <div
                                 key={item.id}
-                                className={`relative rounded-[2.5rem] overflow-hidden group transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
+                                onClick={() => setSelectedClassForWod(item)}
+                                className={`relative rounded-[2.5rem] overflow-hidden group transition-all active:scale-[0.98] cursor-pointer ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
                             >
                                 {/* Background Image with Overlay */}
                                 <div className="absolute inset-0 z-0">
@@ -300,6 +349,81 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 role="coach"
                 activeTab="home"
             />
+
+            {/* WOD DETAIL MODAL */}
+            {selectedClassForWod && (
+                <div className="fixed inset-0 z-[300] flex items-end justify-center sm:items-center p-0 sm:p-6 translate-y-0 transition-transform">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setSelectedClassForWod(null)}></div>
+                    <div className={`relative w-full max-w-md ${isDarkMode ? 'bg-[#1F2128]' : 'bg-[#F3F4F6]'} rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300`}>
+                        <div className="relative h-48">
+                            <img
+                                src={selectedClassForWod.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
+                                className="w-full h-full object-cover"
+                                alt=""
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#1F2128] via-[#1F2128]/40 to-transparent"></div>
+                            <button
+                                onClick={() => setSelectedClassForWod(null)}
+                                className="absolute top-6 right-6 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 active:scale-95"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="px-8 pb-10 -mt-8 relative z-10">
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="bg-[#FF1F40] text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">WOD DEL DÍA</span>
+                                <span className="bg-white/10 backdrop-blur-md text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">
+                                    {selectedClassForWod.startTime} - {selectedClassForWod.endTime}
+                                </span>
+                            </div>
+                            <h3 className="text-3xl font-black italic uppercase italic text-white mb-2 leading-none">{selectedClassForWod.name}</h3>
+                            <p className="text-xs text-gray-400 font-medium mb-8">Coach {user?.displayName || 'Coach'} • Sala Principal</p>
+
+                            <div className="space-y-3 mb-8">
+                                {selectedClassForWod.wod && selectedClassForWod.wod.length > 0 ? (
+                                    selectedClassForWod.wod.map((exercise: any, i: number) => (
+                                        <div key={i} className={`p-5 rounded-[1.5rem] flex items-center justify-between ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm border border-gray-100'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-[#FF1F40]/10 rounded-xl flex items-center justify-center text-[#FF1F40]">
+                                                    <Dumbbell size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black uppercase italic leading-tight">{exercise.exerciseName}</h4>
+                                                    <p className="text-[10px] text-gray-500 font-bold uppercase">{exercise.sets} Sets • {exercise.reps} Reps</p>
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={16} className="text-gray-600" />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-10 text-center opacity-30 border-2 border-dashed border-gray-700 rounded-[2rem]">
+                                        <Activity size={32} className="mx-auto mb-3" />
+                                        <p className="text-xs font-black uppercase tracking-widest text-white">Sin WOD para esta sesión</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => handleExportPDF(selectedClassForWod)}
+                                    className="bg-white text-black py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all"
+                                >
+                                    <FileDown size={16} />
+                                    PDF WOD
+                                </button>
+                                <button
+                                    onClick={() => navigate(`/manage-attendance/${selectedClassForWod.id}`)}
+                                    className="bg-[#FF1F40] text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all shadow-red-900/40"
+                                >
+                                    <Check size={16} strokeWidth={3} />
+                                    ASISTENCIA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

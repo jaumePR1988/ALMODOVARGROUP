@@ -2,22 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Bell,
-    MessageSquare,
     Calendar,
     Users,
     Upload,
     LayoutGrid,
-    Sun,
-    Moon,
     Activity,
-    User,
-    LogOut
+    Dumbbell
 } from 'lucide-react';
 import BottomNavigation from './components/BottomNavigation';
 import TopHeader from './components/TopHeader';
-import { db, auth } from './firebase';
+import { db } from './firebase';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
 
 const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
@@ -169,23 +164,33 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         </button>
 
                         <button
-                            onClick={() => navigate('/manage-groups')} // Placeholder
+                            onClick={() => navigate('/manage-groups')}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                        >
+                            <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                                <LayoutGrid size={28} />
+                            </div>
+                            <span className={`font-bold text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Grupos</span>
+                        </button>
+
+                        <button
+                            onClick={() => navigate('/exercise-library')}
+                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
+                        >
+                            <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                                <Dumbbell size={28} />
+                            </div>
+                            <span className={`font-bold text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Biblioteca WOD</span>
+                        </button>
+
+                        <button
+                            onClick={() => navigate('/reports')}
                             className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
                         >
                             <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
                                 <Activity size={28} />
                             </div>
-                            <span className={`font-bold text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Gestión Grupos</span>
-                        </button>
-
-                        <button
-                            onClick={() => navigate('/manage-coaches')}
-                            className={`${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'} p-6 rounded-3xl flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all border border-transparent dark:border-gray-800/50`}
-                        >
-                            <div className="w-14 h-14 bg-[#FF1F40] rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30">
-                                <User size={28} />
-                            </div>
-                            <span className={`font-bold text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Gestión Coach</span>
+                            <span className={`font-bold text-sm text-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Reports</span>
                         </button>
 
                         <button

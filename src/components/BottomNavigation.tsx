@@ -31,8 +31,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) 
         admin: [
             { icon: <Calendar size={20} />, label: 'Sesión', path: '/manage-classes' },
             { icon: <Users size={20} />, label: 'Usuarios', path: '/manage-users' },
-            { icon: <User size={20} />, label: 'Coach', path: '/manage-coaches' },
-            { icon: <Activity size={20} />, label: 'Ejercicios', path: '#' },
+            { icon: <Activity size={20} />, label: 'Reports', path: '/reports' },
+            { icon: <Zap size={20} />, label: 'Ejercicios', path: '/exercise-library' },
             { icon: <Settings size={20} />, label: 'Accesos', path: '/notification-settings' },
         ],
         coach: [

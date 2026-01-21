@@ -8,8 +8,15 @@ import {
   Calendar,
   Check,
   Users,
-  LogOut
+  LogOut,
+  Dumbbell,
+  FileDown,
+  ChevronRight,
+  X
 } from 'lucide-react';
+// @ts-ignore
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import BottomNavigation from './components/BottomNavigation';
 import TopHeader from './components/TopHeader';
 import { db, auth } from './firebase';
@@ -31,6 +38,32 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
   // State for user info
   const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedClassForWod, setSelectedClassForWod] = useState<any>(null); // For WOD Modal
+
+  // Helper: Saturday 10:00 AM Rule
+  const isReservationAllowed = (targetDateStr: string) => {
+    const now = new Date();
+    const targetDate = new Date(targetDateStr);
+
+    // Get current week's Sunday
+    const currentSunday = new Date();
+    const dayOfWeek = currentSunday.getDay(); // 0 (Sun) to 6 (Sat)
+    const diffToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    currentSunday.setDate(currentSunday.getDate() + diffToSunday);
+    currentSunday.setHours(23, 59, 59, 999);
+
+    // If target date is within current week (up to Sunday), it's always allowed
+    if (targetDate <= currentSunday) return true;
+
+    // If it's for next week, check if it's Saturday after 10:00 AM
+    // Find last Saturday relative to next week's start (which is next Monday)
+    // Actually, simple: is today Saturday (6) and time > 10:00?
+    // Or is today Sunday (0)?
+    const isSaturdayPast10 = now.getDay() === 6 && now.getHours() >= 10;
+    const isSunday = now.getDay() === 0;
+
+    return isSaturdayPast10 || isSunday;
+  };
 
   useEffect(() => {
     // Rely on App.tsx for auth state and redirection
@@ -68,7 +101,7 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
     const days = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
     const today = new Date();
 
-    const generatedWeek = Array.from({ length: 7 }, (_, i) => {
+    const generatedWeek = Array.from({ length: 10 }, (_, i) => {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const dayName = days[d.getDay()];
@@ -157,7 +190,13 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const handleReserve = async (classId: string, current: number, max: number) => {
     // If already confirmed or in queue, this button acts as Cancel (logic handled in UI usually, but double check)
     if (userReservations[classId]) {
-      // The UI should call handleCancel, but just in case
+      return;
+    }
+
+    // SATURDAY 10:00 AM RULE
+    const activeDay = weekDays.find(d => d.date === selectedDate);
+    if (activeDay && !isReservationAllowed(activeDay.fullDate)) {
+      alert("⚠️ Las reservas para la próxima semana todavía no están abiertas.\n\nSe abrirán oficialmente el SÁBADO a las 10:00h.");
       return;
     }
 
@@ -195,7 +234,21 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
   // Accept Promotion
   const handleAcceptPromotion = async (reservationId: string) => {
     try {
-      // 1. Update Reservation Status
+      // 1. Check if reservation is allowed for this date (Saturday 10AM rule)
+      const res = await getDoc(doc(db, 'reservations', reservationId));
+      if (res.exists()) {
+        const classId = res.data().classId;
+        const classSnap = await getDoc(doc(db, 'classes', classId));
+        if (classSnap.exists()) {
+          const classData = classSnap.data();
+          if (!isReservationAllowed(classData.date)) {
+            alert("Las reservas para la próxima semana abren el sábado a las 10:00h");
+            return;
+          }
+        }
+      }
+
+      // 2. Update Reservation Status
       await updateDoc(doc(db, 'reservations', reservationId), {
         status: 'confirmed'
       });
@@ -293,6 +346,58 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
     } catch (error) {
       console.error("Error canceling:", error);
     }
+  };
+
+  const handleExportPDF = (classData: any) => {
+    const doc = new jsPDF();
+    const logoUrl = "https://raw.githubusercontent.com/lucide-react/lucide/main/icons/dumbbell.png"; // Placeholder for Logo
+
+    // Styling
+    doc.setFillColor(255, 31, 64); // Brand Red
+    doc.rect(0, 0, 210, 40, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("ALMODOVAR BOX", 105, 15, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.text("CENTRO DE ALTO RENDIMIENTO", 105, 22, { align: "center" });
+    doc.text(`Sesión: ${classData.name} • ${classData.date}`, 105, 30, { align: "center" });
+
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(12);
+    doc.text(`Coach: ${classData.coachId?.split('-')[1] || 'Staff'}`, 15, 55);
+    doc.text(`Grupo: ${classData.group}`, 150, 55);
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, 60, 195, 60);
+
+    const tableData = (classData.wod || []).map((item: any) => [
+      item.exerciseName,
+      item.sets,
+      item.reps,
+      item.notes
+    ]);
+
+    (doc as any).autoTable({
+      startY: 70,
+      head: [['EJERCICIO', 'SETS', 'REPES', 'NOTAS']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 31, 64], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 5 },
+      columnStyles: {
+        0: { fontStyle: 'bold', width: 60 }
+      }
+    });
+
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    doc.text("Generado por Almodovar App v2.1", 105, finalY, { align: "center" });
+
+    doc.save(`WOD_${classData.name}_${classData.date}.pdf`);
   };
 
   // Redundant theme/logout removed (now in TopHeader)
@@ -472,7 +577,10 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
                     <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-r from-[#2A2D3A] via-[#2A2D3A]/90 to-transparent' : 'bg-gradient-to-r from-white via-white/90 to-transparent'}`} />
                   </div>
 
-                  <div className="p-6 space-y-4 relative z-10">
+                  <div
+                    className="p-6 space-y-4 relative z-10 cursor-pointer"
+                    onClick={() => setSelectedClassForWod(item)}
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-2xl bg-[#FF1F40] flex flex-col items-center justify-center text-white shadow-lg shadow-red-600/20">
@@ -567,6 +675,90 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
         role="user"
         activeTab="home"
       />
+
+      {/* WOD DETAIL MODAL */}
+      {selectedClassForWod && (
+        <div className="fixed inset-0 z-[300] flex items-end justify-center sm:items-center p-0 sm:p-6 translate-y-0 transition-transform">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setSelectedClassForWod(null)}></div>
+          <div className={`relative w-full max-w-md ${isDarkMode ? 'bg-[#1F2128]' : 'bg-[#F3F4F6]'} rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300`}>
+
+            {/* Modal Header Image */}
+            <div className="relative h-48">
+              <img
+                src={selectedClassForWod.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
+                className="w-full h-full object-cover"
+                alt=""
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1F2128] via-[#1F2128]/40 to-transparent"></div>
+              <button
+                onClick={() => setSelectedClassForWod(null)}
+                className="absolute top-6 right-6 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 active:scale-95"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-8 pb-10 -mt-8 relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="bg-[#FF1F40] text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">WOD DEL DÍA</span>
+                <span className="bg-white/10 backdrop-blur-md text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">
+                  {selectedClassForWod.startTime} - {selectedClassForWod.endTime}
+                </span>
+              </div>
+              <h3 className="text-3xl font-black italic uppercase italic text-white mb-2 leading-none">{selectedClassForWod.name}</h3>
+              <p className="text-xs text-gray-400 font-medium mb-8">Coach {selectedClassForWod.coachId?.split('-')[1] || 'Staff'} • {selectedClassForWod.group}</p>
+
+              {/* WOD Content */}
+              <div className="space-y-3 mb-8">
+                {selectedClassForWod.wod && selectedClassForWod.wod.length > 0 ? (
+                  selectedClassForWod.wod.map((exercise: any, i: number) => (
+                    <div key={i} className={`p-5 rounded-[1.5rem] flex items-center justify-between ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm border border-gray-100'}`}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-[#FF1F40]/10 rounded-xl flex items-center justify-center text-[#FF1F40]">
+                          <Dumbbell size={20} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black uppercase italic leading-tight">{exercise.exerciseName}</h4>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase">{exercise.sets} Sets • {exercise.reps} Reps</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-600" />
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-10 text-center opacity-30 border-2 border-dashed border-gray-700 rounded-[2rem]">
+                    <Activity size={32} className="mx-auto mb-3" />
+                    <p className="text-xs font-black uppercase tracking-widest text-white">Próximamente publicaremos el WOD</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleExportPDF(selectedClassForWod)}
+                  className="bg-white text-black py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all"
+                >
+                  <FileDown size={16} />
+                  Exportar PDF
+                </button>
+                <button
+                  onClick={() => {
+                    const status = userReservations[selectedClassForWod.id];
+                    if (status) handleCancel(selectedClassForWod.id);
+                    else handleReserve(selectedClassForWod.id, selectedClassForWod.currentCapacity, selectedClassForWod.maxCapacity);
+                    setSelectedClassForWod(null);
+                  }}
+                  className={`${userReservations[selectedClassForWod.id] ? 'bg-red-500' : 'bg-[#FF1F40]'} text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all shadow-red-900/40`}
+                >
+                  {userReservations[selectedClassForWod.id] ? <X size={16} strokeWidth={3} /> : <Check size={16} strokeWidth={3} />}
+                  {userReservations[selectedClassForWod.id] ? 'CANCELAR' : 'RESERVAR'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
