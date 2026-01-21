@@ -33,16 +33,11 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        setUserId(user.uid);
-      } else {
-        setUserId(null);
-        navigate('/login');
-      }
-    });
-    return () => unsubscribe();
-  }, [navigate]);
+    // Rely on App.tsx for auth state and redirection
+    if (auth.currentUser) {
+      setUserId(auth.currentUser.uid);
+    }
+  }, []);
 
   useEffect(() => {
     if (!userId) return;

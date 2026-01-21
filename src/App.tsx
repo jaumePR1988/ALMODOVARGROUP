@@ -153,7 +153,7 @@ const AppContent = () => {
       <Route path="/manage-attendance/:classId" element={<AttendanceList />} />
       <Route path="/manage-users" element={<AdminUsersList />} />
       <Route path="/manage-groups" element={<AdminGroupsList />} />
-      <Route path="/agenda" element={<Agenda />} />
+      <Route path="/agenda" element={<Agenda onLogout={handleLogout} />} />
       {/* Dev Switch */}
       <Route path="/switch" element={<DevSwitch onLogout={handleLogout} />} />
     </Routes>

@@ -27,15 +27,11 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
     const [coachProfileId, setCoachProfileId] = useState<string | null>(null);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-            } else {
-                navigate('/'); // Redirect if not logged in
-            }
-        });
-        return () => unsubscribe();
-    }, [navigate]);
+        // Rely on App.tsx for auth state and redirection
+        if (auth.currentUser) {
+            setUser(auth.currentUser);
+        }
+    }, []);
 
     useEffect(() => {
         const observer = new MutationObserver((mutations) => {

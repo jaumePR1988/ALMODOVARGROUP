@@ -10,7 +10,7 @@ import TopHeader from './TopHeader';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy, where, doc, getDoc, addDoc, updateDoc, increment, deleteDoc, getDocs, limit } from 'firebase/firestore';
 
-const Agenda = () => {
+const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
 
@@ -45,8 +45,15 @@ const Agenda = () => {
                 setUserProfile(data);
 
                 // Auto-select their group if not admin
-                if (data.role !== 'admin' && data.group) {
-                    setSelectedGroup(data.group as 'box' | 'fit');
+                if (data.role !== 'admin') {
+                    const userGroups = Array.isArray(data.groups) ? data.groups : (data.group ? [data.group] : []);
+                    if (userGroups.length > 0) {
+                        // Priority: if already 'box' or 'fit' set, keep it if allowed, else select first
+                        const possibleGroup = userGroups[0].toLowerCase() as 'box' | 'fit';
+                        if (possibleGroup === 'box' || possibleGroup === 'fit') {
+                            setSelectedGroup(possibleGroup);
+                        }
+                    }
                 }
             }
         };
@@ -196,6 +203,7 @@ const Agenda = () => {
                     subtitle="Sesiones del Box"
                     onBack={() => navigate(-1)}
                     showNotificationDot={false}
+                    onLogout={onLogout}
                 />
 
                 {/* 1. Week Selector */}
@@ -219,10 +227,14 @@ const Agenda = () => {
                     {/* BOX Card */}
                     <button
                         onClick={() => setSelectedGroup('box')}
-                        disabled={userProfile?.role !== 'admin' && userProfile?.group !== 'box'}
+                        disabled={userProfile?.role !== 'admin' &&
+                            !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('box') &&
+                            userProfile?.group?.toLowerCase() !== 'box'}
                         className={`relative h-24 rounded-3xl overflow-hidden shadow-md group transition-all 
                   ${selectedGroup === 'box' ? 'ring-4 ring-[#FF1F40]' : ''}
-                  ${(userProfile?.role !== 'admin' && userProfile?.group !== 'box') ? 'opacity-40 grayscale cursor-not-allowed' : ''}
+                  ${(userProfile?.role !== 'admin' &&
+                                !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('box') &&
+                                userProfile?.group?.toLowerCase() !== 'box') ? 'opacity-40 grayscale cursor-not-allowed' : ''}
               `}
                     >
                         <img src="https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=400&fit=crop" className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" />
@@ -234,10 +246,14 @@ const Agenda = () => {
                     {/* FIT Card */}
                     <button
                         onClick={() => setSelectedGroup('fit')}
-                        disabled={userProfile?.role !== 'admin' && userProfile?.group !== 'fit'}
+                        disabled={userProfile?.role !== 'admin' &&
+                            !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('fit') &&
+                            userProfile?.group?.toLowerCase() !== 'fit'}
                         className={`relative h-24 rounded-3xl overflow-hidden shadow-md group transition-all 
                   ${selectedGroup === 'fit' ? 'ring-4 ring-[#FF1F40]' : ''}
-                  ${(userProfile?.role !== 'admin' && userProfile?.group !== 'fit') ? 'opacity-40 grayscale cursor-not-allowed' : ''}
+                  ${(userProfile?.role !== 'admin' &&
+                                !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('fit') &&
+                                userProfile?.group?.toLowerCase() !== 'fit') ? 'opacity-40 grayscale cursor-not-allowed' : ''}
               `}
                     >
                         <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&fit=crop" className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" />
