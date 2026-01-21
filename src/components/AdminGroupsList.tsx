@@ -41,7 +41,7 @@ interface User {
     photoURL?: string;
 }
 
-const AdminGroupsList = () => {
+const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [groups, setGroups] = useState<GroupCard[]>([]);
@@ -326,6 +326,7 @@ const AdminGroupsList = () => {
                     title="Gestión de Grupos"
                     subtitle="Organización del Box"
                     onBack={() => navigate('/admin')}
+                    onLogout={onLogout}
                 />
 
                 {/* Search Bar */}

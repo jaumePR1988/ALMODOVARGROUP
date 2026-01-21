@@ -29,12 +29,40 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
     // State
     const [weekDays, setWeekDays] = useState<{ day: string; date: string; fullDate: string; active: boolean }[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().getDate().toString());
-    const [selectedGroup, setSelectedGroup] = useState<'box' | 'fit'>('box');
+    const [selectedGroup, setSelectedGroup] = useState<string>('box');
+    const [availableGroups, setAvailableGroups] = useState<any[]>([]);
     const [classList, setClassList] = useState<any[]>([]);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [reservations, setReservations] = useState<{ [key: string]: string }>({});
 
-    // 1. Fetch User Profile to Lock Groups
+    // 1. Fetch Groups
+    useEffect(() => {
+        const q = query(collection(db, 'groups'), orderBy('name', 'asc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAvailableGroups(groupsData);
+
+            // Set initial selected group if not set
+            if (groupsData.length > 0 && !selectedGroup) {
+                // If coach, try to find an allowed group
+                if (userProfile && userProfile.role === 'coach') {
+                    const allowedGroups = (userProfile.groups || []).map((g: string) => g.toLowerCase());
+                    const legacyGroup = userProfile.group?.toLowerCase();
+                    const groupToSelect = groupsData.find(g =>
+                        allowedGroups.includes(g.name.toLowerCase()) ||
+                        legacyGroup === g.name.toLowerCase()
+                    );
+                    if (groupToSelect) setSelectedGroup(groupToSelect.name.toLowerCase());
+                    else setSelectedGroup(groupsData[0].name.toLowerCase());
+                } else {
+                    setSelectedGroup(groupsData[0].name.toLowerCase());
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, [userProfile, selectedGroup]);
+
+    // 2. Fetch User Profile to Lock Groups
     useEffect(() => {
         const fetchProfile = async () => {
             if (!auth.currentUser) return;
@@ -223,44 +251,42 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                 </section>
 
                 {/* 2. Group Selector (Cards) */}
-                <section className="grid grid-cols-2 gap-4">
-                    {/* BOX Card */}
-                    <button
-                        onClick={() => setSelectedGroup('box')}
-                        disabled={userProfile?.role !== 'admin' &&
-                            !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('box') &&
-                            userProfile?.group?.toLowerCase() !== 'box'}
-                        className={`relative h-24 rounded-3xl overflow-hidden shadow-md group transition-all 
-                  ${selectedGroup === 'box' ? 'ring-4 ring-[#FF1F40]' : ''}
-                  ${(userProfile?.role !== 'admin' &&
-                                !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('box') &&
-                                userProfile?.group?.toLowerCase() !== 'box') ? 'opacity-40 grayscale cursor-not-allowed' : ''}
-              `}
-                    >
-                        <img src="https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=400&fit=crop" className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" />
-                        <div className="relative z-10 flex flex-col items-center justify-center h-full">
-                            <span className="text-white text-3xl font-black italic bg-[#FF1F40] px-2 -rotate-2">BOX</span>
-                        </div>
-                    </button>
+                <section>
+                    <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                        {availableGroups.map((g) => {
+                            const isSelected = selectedGroup.toLowerCase() === g.name.toLowerCase();
+                            const isAllowed = userProfile?.role === 'admin' ||
+                                (userProfile?.groups || []).map((ug: string) => ug.toLowerCase()).includes(g.name.toLowerCase()) ||
+                                userProfile?.group?.toLowerCase() === g.name.toLowerCase();
 
-                    {/* FIT Card */}
-                    <button
-                        onClick={() => setSelectedGroup('fit')}
-                        disabled={userProfile?.role !== 'admin' &&
-                            !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('fit') &&
-                            userProfile?.group?.toLowerCase() !== 'fit'}
-                        className={`relative h-24 rounded-3xl overflow-hidden shadow-md group transition-all 
-                  ${selectedGroup === 'fit' ? 'ring-4 ring-[#FF1F40]' : ''}
-                  ${(userProfile?.role !== 'admin' &&
-                                !(userProfile?.groups || []).map((g: string) => g.toLowerCase()).includes('fit') &&
-                                userProfile?.group?.toLowerCase() !== 'fit') ? 'opacity-40 grayscale cursor-not-allowed' : ''}
-              `}
-                    >
-                        <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=400&fit=crop" className="absolute inset-0 w-full h-full object-cover brightness-[0.4]" />
-                        <div className="relative z-10 flex flex-col items-center justify-center h-full">
-                            <span className="text-[#FF1F40] bg-white text-3xl font-black px-2 rotate-2">FIT</span>
-                        </div>
-                    </button>
+                            return (
+                                <button
+                                    key={g.id}
+                                    onClick={() => setSelectedGroup(g.name.toLowerCase())}
+                                    disabled={!isAllowed}
+                                    className={`relative flex-shrink-0 w-36 h-24 rounded-3xl overflow-hidden shadow-md group transition-all 
+                                        ${isSelected ? 'ring-4 ring-[#FF1F40]' : ''}
+                                        ${!isAllowed ? 'opacity-40 grayscale cursor-not-allowed' : ''}
+                                    `}
+                                >
+                                    <img
+                                        src={g.imageUrl || "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=400&fit=crop"}
+                                        className="absolute inset-0 w-full h-full object-cover brightness-[0.4]"
+                                    />
+                                    <div className="relative z-10 flex flex-col items-center justify-center h-full px-2">
+                                        <span className={`text-white text-[10px] font-black italic px-2 py-1 -rotate-2 break-all text-center leading-tight ${isSelected ? 'bg-[#FF1F40]' : 'bg-black/40'}`}>
+                                            {g.name.toUpperCase()}
+                                        </span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                        {availableGroups.length === 0 && (
+                            <div className="w-full text-center py-8 opacity-40 text-[10px] font-black uppercase tracking-widest">
+                                No hay grupos configurados
+                            </div>
+                        )}
+                    </div>
                 </section>
 
                 {/* 3. Class List */}

@@ -56,6 +56,8 @@ import AdminGroupsList from './components/AdminGroupsList';
 import AttendanceList from './components/AttendanceList';
 import Agenda from './components/Agenda';
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 const AppContent = () => {
   const navigate = useNavigate();
   const [isSplashScreen, setIsSplashScreen] = useState(true);
@@ -65,30 +67,46 @@ const AppContent = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        // Fetch profile
-        const profileRef = doc(db, 'users', firebaseUser.uid);
-        const profileSnap = await getDoc(profileRef);
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          // Fetch profile to determine role and approval status
+          const profileRef = doc(db, 'users', firebaseUser.uid);
+          const profileSnap = await getDoc(profileRef);
 
-        if (profileSnap.exists()) {
-          const profileData = profileSnap.data();
-          setUserProfile(profileData);
+          if (profileSnap.exists()) {
+            const profileData = profileSnap.data();
+            setUserProfile(profileData);
 
-          // Redirect based on role only if at root path
-          if (profileData.isApproved && (window.location.pathname === '/' || window.location.pathname === '')) {
-            if (profileData.role === 'admin') navigate('/admin');
-            else if (profileData.role === 'coach') navigate('/coach');
-            else navigate('/');
+            // Redirect based on role only if at root path
+            if (profileData.isApproved && (window.location.pathname === '/' || window.location.pathname === '')) {
+              if (profileData.role === 'admin') navigate('/admin');
+              else if (profileData.role === 'coach') navigate('/coach');
+              else navigate('/');
+            }
+
+            // Also check for coach profile to sync stats if needed
+            if (profileData.role === 'coach') {
+              const coachRef = query(collection(db, 'coaches'), where('email', '==', firebaseUser.email));
+              const coachSnap = await getDocs(coachRef);
+              if (!coachSnap.empty) {
+                // Coach exists
+              }
+            }
+          } else {
+            setUserProfile(null);
           }
         } else {
+          setUser(null);
           setUserProfile(null);
         }
-      } else {
-        setUser(null);
-        setUserProfile(null);
+      } catch (error) {
+        console.error("Error in onAuthStateChanged profile sync:", error);
+        // Even if profile fetch fails, we should stop loading to show fallback or login
+        setUser(firebaseUser); // At least we have the auth user
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -144,15 +162,15 @@ const AppContent = () => {
       <Route path="/coach" element={<CoachDashboard onLogout={handleLogout} />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/notification-settings" element={<NotificationSettings />} />
-      <Route path="/manage-classes" element={<ClassManagement />} />
-      <Route path="/create-class" element={<CreateClass />} />
-      <Route path="/edit-class/:classId" element={<CreateClass />} />
-      <Route path="/manage-coaches" element={<ManageCoaches />} />
-      <Route path="/create-coach" element={<CreateCoach />} />
-      <Route path="/edit-coach/:coachId" element={<CreateCoach />} />
-      <Route path="/manage-attendance/:classId" element={<AttendanceList />} />
-      <Route path="/manage-users" element={<AdminUsersList />} />
-      <Route path="/manage-groups" element={<AdminGroupsList />} />
+      <Route path="/manage-classes" element={<ClassManagement onLogout={handleLogout} />} />
+      <Route path="/create-class" element={<CreateClass onLogout={handleLogout} />} />
+      <Route path="/edit-class/:classId" element={<CreateClass onLogout={handleLogout} />} />
+      <Route path="/manage-coaches" element={<ManageCoaches onLogout={handleLogout} />} />
+      <Route path="/create-coach" element={<CreateCoach onLogout={handleLogout} />} />
+      <Route path="/edit-coach/:coachId" element={<CreateCoach onLogout={handleLogout} />} />
+      <Route path="/manage-attendance/:classId" element={<AttendanceList onLogout={handleLogout} />} />
+      <Route path="/manage-users" element={<AdminUsersList onLogout={handleLogout} />} />
+      <Route path="/manage-groups" element={<AdminGroupsList onLogout={handleLogout} />} />
       <Route path="/agenda" element={<Agenda onLogout={handleLogout} />} />
       {/* Dev Switch */}
       <Route path="/switch" element={<DevSwitch onLogout={handleLogout} />} />

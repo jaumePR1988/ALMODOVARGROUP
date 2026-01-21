@@ -21,7 +21,7 @@ import TopHeader from './TopHeader';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
-const ManageCoaches = () => {
+const ManageCoaches = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
     const [coaches, setCoaches] = useState<any[]>([]);
@@ -48,10 +48,12 @@ const ManageCoaches = () => {
     const handleDelete = async (id: string) => {
         if (window.confirm('¿Estás seguro de eliminar este coach? Esta acción no se puede deshacer.')) {
             try {
-                await deleteDoc(doc(db, 'coaches', id));
+                const docRef = doc(db, 'coaches', id);
+                await deleteDoc(docRef);
+                alert("Coach eliminado correctamente");
             } catch (error) {
                 console.error("Error deleting coach:", error);
-                alert("Error al eliminar coach");
+                alert("Error al eliminar coach: " + (error instanceof Error ? error.message : String(error)));
             }
         }
     };
@@ -81,6 +83,7 @@ const ManageCoaches = () => {
                     title="Coaches"
                     subtitle={`Equipo Almodóvar • ${coaches.length} Activos`}
                     onBack={() => navigate('/admin')}
+                    onLogout={onLogout}
                 />
             </div>
 

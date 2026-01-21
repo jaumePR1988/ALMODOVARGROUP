@@ -17,7 +17,7 @@ import TopHeader from './TopHeader';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 
-const CreateClass = () => {
+const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const { classId } = useParams();
     const isEditMode = !!classId;
@@ -28,7 +28,7 @@ const CreateClass = () => {
 
     // Inputs
     const [name, setName] = useState('Nueva Clase de Entrenamiento');
-    const [group, setGroup] = useState<'box' | 'fit'>('box');
+    const [group, setGroup] = useState<string>(''); // Dynamic selection
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
@@ -39,8 +39,9 @@ const CreateClass = () => {
     const [description, setDescription] = useState('');
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-    // Coaches Data
+    // Dynamic Data
     const [coaches, setCoaches] = useState<any[]>([]);
+    const [availableGroups, setAvailableGroups] = useState<any[]>([]);
 
     // Sync theme
     useEffect(() => {
@@ -65,6 +66,21 @@ const CreateClass = () => {
         });
         return () => unsubscribe();
     }, [coachId, isEditMode]);
+
+    // Fetch Groups
+    useEffect(() => {
+        const q = query(collection(db, 'groups'), orderBy('name', 'asc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAvailableGroups(groupsData);
+
+            // Set default group if creating and none selected
+            if (groupsData.length > 0 && !group && !isEditMode) {
+                setGroup(groupsData[0].name);
+            }
+        });
+        return () => unsubscribe();
+    }, [group, isEditMode]);
 
     // Fetch existing class data if editing
     useEffect(() => {
@@ -286,6 +302,7 @@ const CreateClass = () => {
                     title={isEditMode ? 'Editar' : 'Nueva'}
                     subtitle="Sesión de Entrenamiento"
                     onBack={() => navigate(-1)}
+                    onLogout={onLogout}
                 />
             </div>
 
@@ -332,41 +349,33 @@ const CreateClass = () => {
                 <div className="space-y-3">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Grupo (Visible para...)</h3>
                     <div className="grid grid-cols-2 gap-4">
-                        <button
-                            onClick={() => setGroup('box')}
-                            className={`p-6 rounded-[2rem] flex flex-col items-center gap-3 transition-all relative ${group === 'box'
-                                ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
-                                : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
-                                }`}
-                        >
-                            {group === 'box' && (
-                                <div className="absolute top-3 right-3 w-5 h-5 bg-[#FF1F40] rounded-full flex items-center justify-center text-white scale-110">
-                                    <Check size={12} strokeWidth={4} />
+                        {availableGroups.map((g: any) => (
+                            <button
+                                key={g.id}
+                                onClick={() => setGroup(g.name)}
+                                className={`p-6 rounded-[2rem] flex flex-col items-center gap-3 transition-all relative ${group === g.name
+                                    ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
+                                    : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
+                                    }`}
+                            >
+                                {group === g.name && (
+                                    <div className="absolute top-3 right-3 w-5 h-5 bg-[#FF1F40] rounded-full flex items-center justify-center text-white scale-110">
+                                        <Check size={12} strokeWidth={4} />
+                                    </div>
+                                )}
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${group === g.name ? 'text-[#FF1F40]' : 'text-gray-500'}`}>
+                                    <Users size={28} />
                                 </div>
-                            )}
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${group === 'box' ? 'text-[#FF1F40]' : 'text-gray-500'}`}>
-                                <Users size={28} />
-                            </div>
-                            <span className={`text-sm font-black ${group === 'box' ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-gray-500'}`}>AlmodovarBOX</span>
-                        </button>
-
-                        <button
-                            onClick={() => setGroup('fit')}
-                            className={`p-6 rounded-[2rem] flex flex-col items-center gap-3 transition-all relative ${group === 'fit'
-                                ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
-                                : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
-                                }`}
-                        >
-                            {group === 'fit' && (
-                                <div className="absolute top-3 right-3 w-5 h-5 bg-[#FF1F40] rounded-full flex items-center justify-center text-white scale-110">
-                                    <Check size={12} strokeWidth={4} />
-                                </div>
-                            )}
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${group === 'fit' ? 'text-[#FF1F40]' : 'text-gray-500'}`}>
-                                <UserIcon size={28} />
-                            </div>
-                            <span className={`text-sm font-black ${group === 'fit' ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-gray-500'}`}>AlmodovarFIT</span>
-                        </button>
+                                <span className={`text-sm font-black text-center leading-tight ${group === g.name ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-gray-500'}`}>
+                                    {g.name}
+                                </span>
+                            </button>
+                        ))}
+                        {availableGroups.length === 0 && (
+                            <p className="col-span-2 text-center text-[10px] text-gray-500 font-bold uppercase py-4">
+                                No hay grupos creados. Créalos en Gestión Grupos.
+                            </p>
+                        )}
                     </div>
                 </div>
 

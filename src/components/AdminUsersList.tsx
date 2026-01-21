@@ -3,14 +3,15 @@ import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, orderBy } fro
 import { db } from '../firebase';
 import {
     Users, UserCheck, Trash2, Search,
-    ChevronRight, LayoutGrid, List, Phone, Calendar, Mail, Loader2, ArrowLeft
+    Phone, Calendar, Mail, Loader2, ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopHeader from './TopHeader';
 
-const AdminUsersList = () => {
+const AdminUsersList = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const [users, setUsers] = useState<any[]>([]);
+    const [availableGroups, setAvailableGroups] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filter, setFilter] = useState<'all' | 'pending' | 'active' | 'new'>('all');
     const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +39,19 @@ const AdminUsersList = () => {
             }));
             setUsers(usersData);
             setIsLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // Fetch Groups
+    useEffect(() => {
+        const q = query(collection(db, 'groups'), orderBy('name', 'asc'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const groupsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setAvailableGroups(groupsData);
         });
         return () => unsubscribe();
     }, []);
@@ -121,6 +135,7 @@ const AdminUsersList = () => {
                     title="Usuarios"
                     subtitle={`${users.length} Registrados • Gestión Administrativa`}
                     onBack={() => navigate('/admin')}
+                    onLogout={onLogout}
                     showNotificationDot={pendingCount > 0}
                 />
             </div>
@@ -200,6 +215,7 @@ const AdminUsersList = () => {
                                     setUserToDelete(null);
                                 }}
                                 isDarkMode={isDarkMode}
+                                availableGroups={availableGroups}
                             />
                         ))}
                     </div>
@@ -219,7 +235,7 @@ const AdminUsersList = () => {
     );
 };
 
-const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdateGroup, onDelete, isDeleting, onCancelDelete, onConfirmDelete, isDarkMode }: any) => {
+const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdateGroup, onDelete, isDeleting, onCancelDelete, onConfirmDelete, isDarkMode, availableGroups }: any) => {
     return (
         <div className={`${isDarkMode ? 'bg-[#2A2D3A] border-white/5' : 'bg-white border-gray-100 shadow-sm'} rounded-[2rem] border overflow-hidden transition-all hover:border-[#FF1F40]/30 group ${isList ? 'flex items-center p-4' : 'flex flex-col p-6'}`}>
 
@@ -310,8 +326,11 @@ const UserCard = ({ user, isList, onApprove, onUpdateRole, onUpdatePlan, onUpdat
                                 className={`w-full bg-transparent text-xs font-bold uppercase italic outline-none text-[#FF1F40] ${isDarkMode ? '' : '[&>option]:text-gray-900'}`}
                             >
                                 <option value="">Sin Grupo</option>
-                                <option value="AlmodovarBOX">Almodóvar BOX</option>
-                                <option value="AlmodovarFIT">Almodóvar FIT</option>
+                                {availableGroups.map((g: any) => (
+                                    <option key={g.id} value={g.name}>
+                                        {g.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     )}

@@ -37,7 +37,7 @@ interface Attendee {
     attended: boolean;
 }
 
-const AttendanceList = () => {
+const AttendanceList = ({ onLogout }: { onLogout: () => void }) => {
     const { classId } = useParams();
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
@@ -196,6 +196,7 @@ const AttendanceList = () => {
                     title="Asistencia"
                     subtitle={classData?.name || "Cargando clase..."}
                     onBack={() => navigate('/coach')}
+                    onLogout={onLogout}
                 />
             </div>
 

@@ -15,7 +15,7 @@ import TopHeader from './TopHeader';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 
-const CreateCoach = () => {
+const CreateCoach = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const { coachId } = useParams();
     const isEditMode = !!coachId;
@@ -206,6 +206,7 @@ const CreateCoach = () => {
                     title={isEditMode ? "Editar Coach" : "Nuevo Coach"}
                     subtitle={isEditMode ? "Actualiza los datos del equipo" : "Añade un nuevo profesional"}
                     onBack={() => navigate(-1)}
+                    onLogout={onLogout}
                 />
             </div>
 

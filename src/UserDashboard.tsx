@@ -388,7 +388,7 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 <h3 className="text-3xl text-white font-black italic uppercase mb-1 drop-shadow-md">{nextClass.name}</h3>
                 <div className="flex items-center text-gray-200 text-xs font-bold gap-1 uppercase">
                   <MapPin size={14} />
-                  <span>{nextClass.group === 'box' ? 'Almodovar Box' : 'Almodovar Fit'}</span>
+                  <span>{nextClass.group || 'Entrenamiento'}</span>
                   <span className="mx-1">•</span>
                   <span>Coach {nextClass.coachId?.split('-')[1]}</span>
                 </div>

@@ -12,7 +12,7 @@ import TopHeader from './TopHeader';
 import { db } from '../firebase';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 
-const ClassManagement = () => {
+const ClassManagement = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -97,6 +97,7 @@ const ClassManagement = () => {
                     title="Clases"
                     subtitle={`Programación del Box • ${selectedDate}`}
                     onBack={() => navigate('/admin')}
+                    onLogout={onLogout}
                 />
             </div>
 

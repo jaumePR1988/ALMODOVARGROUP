@@ -248,7 +248,7 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                                 <h3 className="text-base font-black italic uppercase leading-tight">{item.name}</h3>
                                                 <div className="flex items-center gap-2 mt-0.5 text-gray-500">
                                                     <MapPin size={12} />
-                                                    <span className="text-[10px] font-bold uppercase">{item.group === 'box' ? 'BOX' : 'FIT'} • Sala Principal</span>
+                                                    <span className="text-[10px] font-bold uppercase">{item.group || 'Clase'} • Sala Principal</span>
                                                 </div>
                                             </div>
                                         </div>
