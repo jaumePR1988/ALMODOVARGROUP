@@ -1,5 +1,4 @@
-import { Component, useState, useEffect } from 'react';
-import type { ErrorInfo, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import UserDashboard from './UserDashboard';
 import AdminDashboard from './AdminDashboard';
@@ -8,41 +7,6 @@ import SplashScreen from './components/SplashScreen';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-
-class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-red-900 text-white flex items-center justify-center p-8 font-mono text-center">
-          <div className="max-w-xl">
-            <h1 className="text-3xl font-bold mb-4">¡Oups! Algo salió mal</h1>
-            <pre className="bg-red-950 p-4 rounded-xl overflow-auto text-sm mb-6">{this.state.error?.message}</pre>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-white text-red-900 font-bold rounded-xl"
-            >
-              Recargar App
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 import Login from './components/Login';
 import Notifications from './components/Notifications';
