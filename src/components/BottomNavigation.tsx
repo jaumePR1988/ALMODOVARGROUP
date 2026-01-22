@@ -42,7 +42,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) 
         ],
         user: [
             { icon: <Zap size={22} />, label: 'WOD', path: '#' },
-            { icon: <Activity size={22} />, label: 'Stats', path: '#' },
+            { icon: <Activity size={22} />, label: 'Stats', path: '/stats' },
             { icon: <MessageSquare size={22} />, label: 'Chat', path: '#' },
             { icon: <Settings size={22} />, label: 'Ajustes', path: '/notification-settings' },
         ]

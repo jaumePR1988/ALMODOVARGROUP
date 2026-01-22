@@ -26,6 +26,7 @@ import LegalPage from './pages/LegalPage';
 import AdminReports from './components/AdminReports';
 import NewsModule from './components/NewsModule';
 import SendNotification from './components/SendNotification';
+import PersonalRecords from './components/PersonalRecords';
 
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -150,6 +151,7 @@ const AppContent = () => {
       <Route path="/legal" element={<LegalPage />} />
       <Route path="/news" element={<NewsModule />} />
       <Route path="/send-notification" element={<SendNotification />} />
+      <Route path="/stats" element={<PersonalRecords />} />
       {/* Dev Switch */}
       <Route path="/switch" element={<DevSwitch onLogout={handleLogout} />} />
     </Routes>
