@@ -12,6 +12,7 @@ import {
 import BottomNavigation from './BottomNavigation';
 import PremiumModal from './PremiumModal';
 import TopHeader from './TopHeader';
+import WodModal from './WodModal';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy, where, doc, getDoc, addDoc, updateDoc, increment, deleteDoc, getDocs, limit } from 'firebase/firestore';
 
@@ -42,6 +43,7 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
 
     // MODAL STATE
     const [modalConfig, setModalConfig] = useState<any>({ isOpen: false, type: 'info', title: '', message: '' });
+    const [selectedClassForWod, setSelectedClassForWod] = useState<any>(null);
 
     // Week Control Logic
     const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -461,7 +463,7 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                             const isFull = item.currentCapacity >= item.maxCapacity;
 
                             return (
-                                <div key={item.id} className="bg-white dark:bg-[#2A2D3A] p-4 rounded-3xl flex items-center justify-between shadow-sm border border-gray-100 dark:border-gray-800">
+                                <div key={item.id} className="relative bg-white dark:bg-[#2A2D3A] p-4 rounded-3xl flex items-center justify-between shadow-sm border border-gray-100 dark:border-gray-800">
                                     <div className="flex items-center gap-4">
                                         {/* Time Column */}
                                         <div className="flex flex-col items-center w-12">
@@ -480,11 +482,20 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                                         </div>
                                     </div>
 
+                                    {/* Invisible Overlay for click entire card */}
+                                    <div
+                                        className="absolute inset-0 z-0"
+                                        onClick={() => setSelectedClassForWod(item)}
+                                    ></div>
+
                                     {/* Button */}
                                     <button
-                                        onClick={() => isReserved ? handleCancel(item.id) : handleReserve(item.id, item.currentCapacity, item.maxCapacity)}
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevent opening WOD modal
+                                            isReserved ? handleCancel(item.id) : handleReserve(item.id, item.currentCapacity, item.maxCapacity);
+                                        }}
                                         className={`
-                                    px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                                        relative z-10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
                                     ${status === 'confirmed' ? 'bg-red-500 text-white' :
                                                 status === 'waitlist' ? 'bg-orange-500 text-white' :
                                                     isFull ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}
@@ -500,39 +511,41 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                     )}
                 </section>
 
-            </div>
+            </div >
 
             {/* ALERT MODAL */}
-            {showAlert && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1F2128] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <Lock size={120} className="transform rotate-12 -translate-y-8 translate-x-8 text-red-500" />
-                        </div>
-
-                        <div className="relative z-10">
-                            <div className="w-16 h-16 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-6 mx-auto">
-                                <Lock size={32} />
+            {
+                showAlert && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-[#1F2128] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                <Lock size={120} className="transform rotate-12 -translate-y-8 translate-x-8 text-red-500" />
                             </div>
 
-                            <h3 className="text-xl font-black text-center mb-2 uppercase italic">Acceso Restringido</h3>
+                            <div className="relative z-10">
+                                <div className="w-16 h-16 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-6 mx-auto">
+                                    <Lock size={32} />
+                                </div>
 
-                            <p className="text-center text-gray-500 dark:text-gray-400 text-sm font-medium leading-relaxed mb-8">
-                                Las reservas para la próxima semana se abrirán el <span className="text-red-500 font-bold">Sábado a las 10:00 AM</span>.
-                                <br /><br />
-                                ¡Prepárate para reservar tu plaza!
-                            </p>
+                                <h3 className="text-xl font-black text-center mb-2 uppercase italic">Acceso Restringido</h3>
 
-                            <button
-                                onClick={() => setShowAlert(false)}
-                                className="w-full bg-[#FF1F40] text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-red-500/30 active:scale-95 transition-transform"
-                            >
-                                Entendido
-                            </button>
+                                <p className="text-center text-gray-500 dark:text-gray-400 text-sm font-medium leading-relaxed mb-8">
+                                    Las reservas para la próxima semana se abrirán el <span className="text-red-500 font-bold">Sábado a las 10:00 AM</span>.
+                                    <br /><br />
+                                    ¡Prepárate para reservar tu plaza!
+                                </p>
+
+                                <button
+                                    onClick={() => setShowAlert(false)}
+                                    className="w-full bg-[#FF1F40] text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-red-500/30 active:scale-95 transition-transform"
+                                >
+                                    Entendido
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Reusable Bottom Navigation */}
             <BottomNavigation
@@ -540,7 +553,14 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                 activeTab="agenda"
             />
 
-        </div>
+            {/* WOD Detail Modal */}
+            <WodModal
+                isOpen={!!selectedClassForWod}
+                onClose={() => setSelectedClassForWod(null)}
+                classData={selectedClassForWod}
+            />
+
+        </div >
     );
 };
 
