@@ -13,10 +13,11 @@ import {
     Image,
     Camera,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Trash2
 } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, writeBatch, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import TopHeader from './TopHeader';
 
 interface GroupCard {
@@ -62,6 +63,7 @@ const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [groupToEdit, setGroupToEdit] = useState<GroupCard | null>(null);
     const [userToConfirm, setUserToConfirm] = useState<{ user: User, targetGroup: GroupCard } | null>(null);
+    const [groupToDelete, setGroupToDelete] = useState<GroupCard | null>(null);
     const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
 
     useEffect(() => {
@@ -317,6 +319,22 @@ const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
         }
     };
 
+    const handleDeleteGroup = async () => {
+        if (!groupToDelete || isSubmitting) return;
+        setIsSubmitting(true);
+
+        try {
+            await deleteDoc(doc(db, 'groups', groupToDelete.id));
+            setGroupToDelete(null);
+            alert('¡Grupo eliminado correctamente!');
+        } catch (error) {
+            console.error("Error deleting group:", error);
+            alert('Error al eliminar el grupo.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32`}>
             <div className="max-w-md mx-auto px-6 pt-6 space-y-6">
@@ -454,6 +472,12 @@ const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
                                             className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center border border-blue-500/10 active:scale-90 transition-all hover:bg-blue-500 hover:text-white"
                                         >
                                             <Edit2 size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => setGroupToDelete(group)}
+                                            className="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center border border-red-500/10 active:scale-90 transition-all hover:bg-red-500 hover:text-white"
+                                        >
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>
@@ -742,6 +766,47 @@ const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
                             </button>
                             <button
                                 onClick={() => setUserToConfirm(null)}
+                                className={`w-full ${isDarkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all`}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Group Confirmation Modal */}
+            {groupToDelete && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center px-6">
+                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-[#1F2128]/95' : 'bg-[#1F2128]/40'} backdrop-blur-2xl`}></div>
+                    <div className={`relative w-full max-w-sm ${isDarkMode ? 'bg-[#262932] border-white/10' : 'bg-white border-gray-200'} rounded-[3rem] border border-white/10 shadow-3xl p-8 text-center animate-in zoom-in-95`}>
+                        <div className="w-20 h-20 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/10">
+                            <Trash2 size={40} strokeWidth={2.5} />
+                        </div>
+
+                        <h3 className={`text-xl font-black italic uppercase italic mb-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Eliminar Grupo?</h3>
+                        <p className="text-xs text-gray-400 font-medium leading-relaxed mb-8">
+                            Estás a punto de eliminar el grupo <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-black italic uppercase`}>{groupToDelete.name}</span>.
+                            <br /><br />
+                            Esta acción es irreversible y podría afectar a los usuarios asignados.
+                        </p>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={handleDeleteGroup}
+                                disabled={isSubmitting}
+                                className="w-full bg-red-500 py-4 rounded-2xl font-black uppercase italic tracking-widest text-sm shadow-xl shadow-red-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-white"
+                            >
+                                {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : (
+                                    <>
+                                        <Trash2 size={18} />
+                                        Eliminar Definitivamente
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setGroupToDelete(null)}
+                                disabled={isSubmitting}
                                 className={`w-full ${isDarkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all`}
                             >
                                 Cancelar
