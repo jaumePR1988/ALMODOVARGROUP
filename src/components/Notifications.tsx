@@ -22,8 +22,8 @@ const Notifications = () => {
 
         const q = query(
             collection(db, 'user_notifications'),
-            where('userId', '==', auth.currentUser.uid),
-            orderBy('createdAt', 'desc')
+            where('userId', '==', auth.currentUser.uid)
+            // Removed orderBy to prevent "Missing Index" errors on new queries
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -32,6 +32,10 @@ const Notifications = () => {
                 ...doc.data(),
                 createdAt: doc.data().createdAt?.toDate() || new Date()
             }));
+
+            // Client-side sort
+            data.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
+
             setNotifications(data);
         });
 

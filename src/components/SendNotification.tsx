@@ -10,6 +10,7 @@ import { db, auth } from '../firebase';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { sendNotificationToMultiple } from '../utils/notificationService';
 import TopHeader from './TopHeader';
+import PremiumModal from './PremiumModal';
 
 const SendNotification = () => {
     const navigate = useNavigate();
@@ -26,9 +27,16 @@ const SendNotification = () => {
     // Data
     const [groups, setGroups] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
-    const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [sending, setSending] = useState(false);
+
+
+    // Modal State
+    const [showModal, setShowModal] = useState(false);
+    const [modalData, setModalData] = useState({ title: '', message: '', type: 'success' as 'success' | 'danger' });
+
+    const triggerModal = (title: string, msg: string, type: 'success' | 'danger') => {
+        setModalData({ title, message: msg, type });
+        setShowModal(true);
+    };
 
     // 1. Fetch Auth & Role
     useEffect(() => {
@@ -107,7 +115,7 @@ const SendNotification = () => {
             }
 
             if (targets.length === 0) {
-                alert("No hay destinatarios seleccionados");
+                triggerModal("Oops", "No hay destinatarios seleccionados", 'danger');
                 setSending(false);
                 return;
             }
@@ -124,14 +132,22 @@ const SendNotification = () => {
             setMessage('');
             setRecipientMode('all');
             setSelectedUsers([]);
-            alert(`Mensaje enviado a ${targets.length} usuarios.`);
-            navigate(-1);
+
+            triggerModal("Mensaje Enviado", `Tu notificación ha sido enviada con éxito a ${targets.length} usuarios.`, 'success');
+            // navigate(-1); // Don't navigate immediately so they can see the success msg
 
         } catch (e) {
             console.error(e);
-            alert("Error al enviar");
+            triggerModal("Error", "Hubo un problema al enviar el mensaje. Inténtalo de nuevo.", 'danger');
         } finally {
             setSending(false);
+        }
+    };
+
+    const handleModalClose = () => {
+        setShowModal(false);
+        if (modalData.type === 'success') {
+            navigate(-1);
         }
     };
 
@@ -268,6 +284,18 @@ const SendNotification = () => {
                 </button>
 
             </div>
+
+            <PremiumModal
+                isOpen={showModal}
+                type={modalData.type as any}
+                title={modalData.title}
+                message={modalData.message}
+                onClose={handleModalClose}
+                confirmText={modalData.type === 'success' ? 'Volver' : 'Aceptar'}
+                cancelText="Cerrar"
+                // Only show cancel button if it's not a success flow (optional logic)
+                onConfirm={handleModalClose}
+            />
         </div>
     );
 };
