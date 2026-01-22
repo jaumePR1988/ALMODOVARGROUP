@@ -35,7 +35,7 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
     // State
     const [weekDays, setWeekDays] = useState<{ day: string; date: string; fullDate: string; active: boolean }[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().getDate().toString());
-    const [selectedGroup, setSelectedGroup] = useState<string>('box');
+    const [selectedGroup, setSelectedGroup] = useState<string>('');
     const [availableGroups, setAvailableGroups] = useState<any[]>([]);
     const [classList, setClassList] = useState<any[]>([]);
     const [userProfile, setUserProfile] = useState<any>(null);
@@ -107,14 +107,14 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                 if (userGroup) {
                     // Normalize
                     const match = availableGroups.find(g => g.name.toLowerCase() === userGroup.toLowerCase());
-                    if (match) setSelectedGroup(match.name.toLowerCase());
-                    else setSelectedGroup(availableGroups[0].name.toLowerCase());
+                    if (match) setSelectedGroup(match.name);
+                    else setSelectedGroup(availableGroups[0].name);
                 } else {
-                    setSelectedGroup(availableGroups[0].name.toLowerCase());
+                    setSelectedGroup(availableGroups[0].name);
                 }
             } else if (!selectedGroup) {
                 // Fallback if no profile yet
-                setSelectedGroup(availableGroups[0].name.toLowerCase());
+                setSelectedGroup(availableGroups[0].name);
             }
         }
     }, [userProfile, availableGroups, selectedGroup]);
