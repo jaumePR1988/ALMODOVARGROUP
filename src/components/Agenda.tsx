@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
     Calendar,
     User,
-    ArrowLeft
+    ArrowLeft,
+    ChevronRight,
+    Lock,
+    Info,
+    AlertTriangle
 } from 'lucide-react';
 import BottomNavigation from './BottomNavigation';
+import PremiumModal from './PremiumModal';
 import TopHeader from './TopHeader';
 import { db, auth } from '../firebase';
 import { collection, onSnapshot, query, orderBy, where, doc, getDoc, addDoc, updateDoc, increment, deleteDoc, getDocs, limit } from 'firebase/firestore';
@@ -35,66 +40,89 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [reservations, setReservations] = useState<{ [key: string]: string }>({});
 
+    // MODAL STATE
+    const [modalConfig, setModalConfig] = useState<any>({ isOpen: false, type: 'info', title: '', message: '' });
+
+    // Week Control Logic
+    const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+        const d = new Date();
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+        return new Date(d.setDate(diff));
+    });
+    const [viewingNextWeek, setViewingNextWeek] = useState(false);
+    const [showAlert, setShowAlert] = useState(false);
+
+    const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+
+    const handleNextWeekToggle = () => {
+        if (viewingNextWeek) {
+            // Go back to current week
+            const d = new Date(); // Today
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            setCurrentWeekStart(new Date(d.setDate(diff)));
+            setViewingNextWeek(false);
+            // Default selected date to today when returning
+            setSelectedDate(new Date().getDate().toString());
+        } else {
+            // Try to go to next week
+            const now = new Date();
+            const isSaturdayPast10 = now.getDay() === 6 && now.getHours() >= 10;
+            const isSunday = now.getDay() === 0;
+
+            if (isSaturdayPast10 || isSunday) {
+                // Allowed
+                const nextMonday = new Date(currentWeekStart);
+                nextMonday.setDate(currentWeekStart.getDate() + 7);
+                setCurrentWeekStart(nextMonday);
+                setViewingNextWeek(true);
+                // Default select Monday of next week
+                setSelectedDate(nextMonday.getDate().toString());
+            } else {
+                // Locked
+                setShowAlert(true);
+            }
+        }
+    };
+
     // 1. Fetch Groups
     useEffect(() => {
         const q = query(collection(db, 'groups'), orderBy('name', 'asc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setAvailableGroups(groupsData);
-
-            // Set initial selected group if not set
-            if (groupsData.length > 0 && !selectedGroup) {
-                // If coach, try to find an allowed group
-                if (userProfile && userProfile.role === 'coach') {
-                    const allowedGroups = (userProfile.groups || []).map((g: string) => g.toLowerCase());
-                    const legacyGroup = userProfile.group?.toLowerCase();
-                    const groupToSelect = groupsData.find(g =>
-                        allowedGroups.includes(g.name.toLowerCase()) ||
-                        legacyGroup === g.name.toLowerCase()
-                    );
-                    if (groupToSelect) setSelectedGroup(groupToSelect.name.toLowerCase());
-                    else setSelectedGroup(groupsData[0].name.toLowerCase());
-                } else {
-                    setSelectedGroup(groupsData[0].name.toLowerCase());
-                }
-            }
         });
         return () => unsubscribe();
-    }, [userProfile, selectedGroup]);
-
-    // 2. Fetch User Profile to Lock Groups
-    useEffect(() => {
-        const fetchProfile = async () => {
-            if (!auth.currentUser) return;
-            const docRef = doc(db, 'users', auth.currentUser.uid);
-            const snap = await getDoc(docRef);
-            if (snap.exists()) {
-                const data = snap.data();
-                setUserProfile(data);
-
-                // Auto-select their group if not admin
-                if (data.role !== 'admin') {
-                    const userGroups = Array.isArray(data.groups) ? data.groups : (data.group ? [data.group] : []);
-                    if (userGroups.length > 0) {
-                        // Priority: if already 'box' or 'fit' set, keep it if allowed, else select first
-                        const possibleGroup = userGroups[0].toLowerCase() as 'box' | 'fit';
-                        if (possibleGroup === 'box' || possibleGroup === 'fit') {
-                            setSelectedGroup(possibleGroup);
-                        }
-                    }
-                }
-            }
-        };
-        fetchProfile();
     }, []);
 
-    // 2. Generate Week Days
+    // 2. Auto-Select Group based on Profile or Default
+    useEffect(() => {
+        if (availableGroups.length > 0) {
+            if (userProfile && !selectedGroup) {
+                // If user has a specific group, try to set it
+                const userGroup = userProfile.group || (userProfile.groups && userProfile.groups[0]);
+                if (userGroup) {
+                    // Normalize
+                    const match = availableGroups.find(g => g.name.toLowerCase() === userGroup.toLowerCase());
+                    if (match) setSelectedGroup(match.name.toLowerCase());
+                    else setSelectedGroup(availableGroups[0].name.toLowerCase());
+                } else {
+                    setSelectedGroup(availableGroups[0].name.toLowerCase());
+                }
+            } else if (!selectedGroup) {
+                // Fallback if no profile yet
+                setSelectedGroup(availableGroups[0].name.toLowerCase());
+            }
+        }
+    }, [userProfile, availableGroups, selectedGroup]);
+
+    // 3. Generate Week Days
     useEffect(() => {
         const days = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
-        const today = new Date();
         const generated = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date(today);
-            d.setDate(today.getDate() + i);
+            const d = new Date(currentWeekStart);
+            d.setDate(currentWeekStart.getDate() + i);
             return {
                 day: days[d.getDay()],
                 date: d.getDate().toString(),
@@ -103,11 +131,13 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
             };
         });
         setWeekDays(generated);
-    }, [selectedDate]);
+    }, [selectedDate, currentWeekStart]);
 
-    // 3. Fetch Classes
+    // 4. Fetch Classes
     useEffect(() => {
-        console.log("Agenda: Fetching classes...", selectedGroup, selectedDate);
+        if (!selectedGroup) return;
+
+        console.log("Agenda: Fetching classes...", selectedGroup);
         const q = query(
             collection(db, 'classes'),
             where('group', '==', selectedGroup)
@@ -116,21 +146,14 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Client-side date filter (Firestore string filtering can be tricky with ISO)
-            // Just filter by the string match we generated
-            // Re-calculating activeDay here to avoid 'weekDays' dependency if possible, or just strict filter
-            // Ideally 'selectedDate' (string 10, 11) is enough if we know the current month/ISO
-            // But let's keep it simple: MATCH FULL DATE from the weekDays object logic
-
-            // We need to match 'selectedDate' (e.g. "24") to the actual fullDate
-            // Let's re-derive it to be safe and avoid 'weekDays' dependency causing loops
-            const today = new Date();
-            // This logic must match the week generation exactly
-            // Find which day offset matches the selectedDate
+            // Client-side date filter
+            // 1. Find the expected Full Date for the selected day number
             let targetFullDate = "";
+
+            // Loop through the *current view's* week to find the matching date
             for (let i = 0; i < 7; i++) {
-                const d = new Date();
-                d.setDate(today.getDate() + i);
+                const d = new Date(currentWeekStart);
+                d.setDate(currentWeekStart.getDate() + i);
                 if (d.getDate().toString() === selectedDate) {
                     targetFullDate = d.toISOString().split('T')[0];
                     break;
@@ -139,16 +162,19 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
 
             if (targetFullDate) {
                 data = data.filter((c: any) => c.date === targetFullDate);
+            } else {
+                // Should not happen, but safe fallback
+                data = [];
             }
 
-            // Client-side Sort
+            // Sort by time
             data.sort((a: any, b: any) => a.startTime.localeCompare(b.startTime));
 
             console.log("Agenda: Classes found", data.length);
             setClassList(data);
         });
         return () => unsubscribe();
-    }, [selectedGroup, selectedDate]); // Removed weekDays from dependency to prevent loops
+    }, [selectedGroup, selectedDate, currentWeekStart]);
 
     // 4. Fetch Reservations (for button status)
     useEffect(() => {
@@ -165,64 +191,209 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
     // --- Handlers (Reuse logic from UserDashboard) ---
     const handleReserve = async (classId: string, current: number, max: number) => {
         if (!auth.currentUser) return;
-        try {
-            if (current >= max) {
-                await addDoc(collection(db, 'reservations'), {
-                    userId: auth.currentUser.uid,
-                    classId,
-                    reservedAt: new Date().toISOString(),
-                    status: 'waitlist'
-                });
-                alert("Unido a lista de espera");
-            } else {
-                await addDoc(collection(db, 'reservations'), {
-                    userId: auth.currentUser.uid,
-                    classId,
-                    reservedAt: new Date().toISOString(),
-                    status: 'confirmed'
-                });
-                await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(1) });
+
+        // 1. Check Credits
+        if (userProfile?.credits <= 0) {
+            setModalConfig({ isOpen: true, type: 'danger', title: 'Sin Créditos', message: '❌ No tienes créditos suficientes para reservar.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+            return;
+        }
+
+        // 2. Weekly Limit Check (Only for Confirmed Reservations, Waitlist is exempt)
+        const isWaitlist = current >= max;
+        if (!isWaitlist) {
+            try {
+                // Fetch target class date
+                const targetClassSnap = await getDoc(doc(db, 'classes', classId));
+                if (targetClassSnap.exists()) {
+                    const targetDateStr = targetClassSnap.data().date; // YYYY-MM-DD
+                    const targetDate = new Date(targetDateStr);
+
+                    // Determine Week Range of the Target Class
+                    const day = targetDate.getDay();
+                    const diff = targetDate.getDate() - day + (day === 0 ? -6 : 1); // Monday
+                    const monday = new Date(targetDate);
+                    monday.setDate(diff);
+                    monday.setHours(0, 0, 0, 0);
+
+                    const nextMonday = new Date(monday);
+                    nextMonday.setDate(monday.getDate() + 7);
+
+                    // Fetch user's confirmed reservations
+                    const q = query(collection(db, 'reservations'), where('userId', '==', auth.currentUser.uid), where('status', '==', 'confirmed'));
+                    const snap = await getDocs(q);
+
+                    // Filter for same week
+                    let weeklyCount = 0;
+
+                    const checks = snap.docs.map(async (r) => {
+                        const cSnap = await getDoc(doc(db, 'classes', r.data().classId));
+                        if (cSnap.exists()) {
+                            const cDate = new Date(cSnap.data().date);
+                            return cDate >= monday && cDate < nextMonday;
+                        }
+                        return false;
+                    });
+
+                    const results = await Promise.all(checks);
+                    weeklyCount = results.filter(Boolean).length;
+
+                    const WEEKLY_LIMIT = userProfile?.weeklyLimit || 2; // Default 2
+
+                    if (weeklyCount >= WEEKLY_LIMIT) {
+                        setModalConfig({
+                            isOpen: true,
+                            type: 'warning',
+                            title: 'Límite Semanal',
+                            message: `Has alcanzado tu límite de ${WEEKLY_LIMIT} reservas para esta semana.\n\nSolo puedes apuntarte a la Lista de Espera.`,
+                            onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false }))
+                        });
+                        return; // Block
+                    }
+                }
+            } catch (e) {
+                console.error("Error checking limits", e);
             }
-        } catch (e) {
-            console.error(e);
+        }
+
+        const executeReserve = async () => {
+            try {
+                if (current >= max) {
+                    await addDoc(collection(db, 'reservations'), {
+                        userId: auth.currentUser.uid,
+                        classId,
+                        reservedAt: new Date().toISOString(),
+                        status: 'waitlist'
+                    });
+                    setModalConfig({ isOpen: true, type: 'warning', title: 'En Cola', message: 'Te has unido a la lista de espera.\nNo se te ha descontado ningún crédito.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+                } else {
+                    await addDoc(collection(db, 'reservations'), {
+                        userId: auth.currentUser.uid,
+                        classId,
+                        reservedAt: new Date().toISOString(),
+                        status: 'confirmed'
+                    });
+                    await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(1) });
+                    await updateDoc(doc(db, 'users', auth.currentUser.uid), { credits: increment(-1) });
+
+                    setModalConfig({ isOpen: true, type: 'success', title: '¡Reserva Confirmada!', message: 'Se ha descontado 1 crédito de tu cuenta.\n¡Te esperamos en el Box!', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+                }
+            } catch (e) {
+                console.error(e);
+                setModalConfig({ isOpen: true, type: 'danger', title: 'Error', message: 'Ha ocurrido un error al reservar.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+            }
+        };
+
+        // Confirm Action Modal
+        if (current >= max) {
+            setModalConfig({
+                isOpen: true,
+                type: 'warning',
+                title: 'Clase Llena',
+                message: '¿Quieres unirte a la lista de espera?\nSi se libera una plaza, te avisaremos.',
+                confirmText: 'Sí, unirme a la cola',
+                onConfirm: executeReserve
+            });
+        } else {
+            setModalConfig({
+                isOpen: true,
+                type: 'info',
+                title: 'Confirmar Reserva',
+                message: '¿Quieres reservar plaza en esta clase?\nSe te descontará 1 crédito.',
+                confirmText: 'Sí, Reservar',
+                onConfirm: executeReserve
+            });
         }
     };
 
     const handleCancel = async (classId: string) => {
-        if (!confirm("¿Cancelar reserva?")) return;
         if (!auth.currentUser) return;
 
-        const q = query(collection(db, 'reservations'), where('userId', '==', auth.currentUser.uid), where('classId', '==', classId));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            const resDoc = snap.docs[0];
-            const status = resDoc.data().status;
-            await deleteDoc(resDoc.ref);
+        // 0. Fetch class details for time check
+        const classSnap = await getDoc(doc(db, 'classes', classId));
+        if (!classSnap.exists()) return;
+        const classData = classSnap.data();
 
-            if (status === 'confirmed') {
-                // Check Waitlist Logic
-                const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), limit(1));
-                const wSnap = await getDocs(wq);
-                if (!wSnap.empty) {
-                    await updateDoc(wSnap.docs[0].ref, { status: 'pending_confirmation', promotedAt: new Date().toISOString() });
-                } else {
-                    await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(-1) });
-                }
-            } else if (status === 'pending_confirmation') {
-                const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), limit(1));
-                const wSnap = await getDocs(wq);
-                if (!wSnap.empty) {
-                    await updateDoc(wSnap.docs[0].ref, { status: 'pending_confirmation', promotedAt: new Date().toISOString() });
-                } else {
-                    await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(-1) });
+        // 1. Calculate time difference
+        const classDate = new Date(`${classData.date}T${classData.startTime}`);
+        const now = new Date();
+        const diffMs = classDate.getTime() - now.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        // 2. Define Action
+        const executeCancel = async () => {
+            const q = query(collection(db, 'reservations'), where('userId', '==', auth.currentUser!.uid), where('classId', '==', classId));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const resDoc = snap.docs[0];
+                const status = resDoc.data().status;
+                await deleteDoc(resDoc.ref);
+
+                if (status === 'confirmed') {
+                    if (diffHours >= 1) {
+                        await updateDoc(doc(db, 'users', auth.currentUser!.uid), { credits: increment(1) });
+                        setModalConfig({ isOpen: true, type: 'success', title: 'Cancelación Exitosa', message: 'Se ha devuelto 1 crédito a tu cuenta.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+                    } else {
+                        setModalConfig({ isOpen: true, type: 'warning', title: 'Cancelación Tardía', message: 'Reserva cancelada sin devolución de crédito (<1h).', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+                    }
+
+                    const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), limit(1));
+                    const wSnap = await getDocs(wq);
+                    if (!wSnap.empty) {
+                        await updateDoc(wSnap.docs[0].ref, { status: 'pending_confirmation', promotedAt: new Date().toISOString() });
+                    } else {
+                        await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(-1) });
+                    }
+                } else if (status === 'pending_confirmation') {
+                    // Check waitlist for other users
+                    const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), limit(1));
+                    const wSnap = await getDocs(wq);
+                    if (!wSnap.empty) {
+                        await updateDoc(wSnap.docs[0].ref, { status: 'pending_confirmation', promotedAt: new Date().toISOString() });
+                    } else {
+                        await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(-1) });
+                    }
+                    setModalConfig({ isOpen: true, type: 'info', title: 'Reserva Rechazada', message: 'Has liberado tu plaza pendiente.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
                 }
             }
+        };
+
+        // 3. Trigger Modal
+        if (diffHours < 1) {
+            setModalConfig({
+                isOpen: true,
+                type: 'danger',
+                title: '¿Cancelar Ahora?',
+                message: '⚠️ Queda MENOS DE 1 HORA para la clase.\n\nSi cancelas ahora, NO SE TE DEVOLVERÁ el crédito.',
+                confirmText: 'Sí, Cancelar y Perder Crédito',
+                cancelText: 'No, Mantener',
+                onConfirm: executeCancel
+            });
+        } else {
+            setModalConfig({
+                isOpen: true,
+                type: 'info',
+                title: 'Confirmar Cancelación',
+                message: '¿Seguro que quieres cancelar?\nSe te devolverá 1 Crédito.',
+                confirmText: 'Sí, Cancelar',
+                cancelText: 'No',
+                onConfirm: executeCancel
+            });
         }
     };
 
 
     return (
         <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32`}>
+            <PremiumModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                cancelText={modalConfig.cancelText}
+                onConfirm={modalConfig.onConfirm}
+                onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+            />
             <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
 
                 {/* Header Unificado */}
@@ -234,60 +405,45 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                     onLogout={onLogout}
                 />
 
-                {/* 1. Week Selector */}
+                {/* 1. Week Selector with Week Control */}
                 <section>
+                    <div className="flex items-center justify-between mb-4 px-1">
+                        <h2 className="text-xs font-bold uppercase text-gray-500 tracking-widest">
+                            {currentWeekStart.getDate()} {monthNames[currentWeekStart.getMonth()]} -
+                            {new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).getDate()} {monthNames[new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).getMonth()]}
+                        </h2>
+                        <button
+                            onClick={handleNextWeekToggle}
+                            className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest py-1.5 px-3 rounded-lg transition-all
+                                ${viewingNextWeek
+                                    ? 'bg-[#FF1F40] text-white shadow-lg shadow-red-500/30'
+                                    : 'bg-white dark:bg-[#2A2D3A] text-gray-500 border border-gray-100 dark:border-gray-800'
+                                }`}
+                        >
+                            {viewingNextWeek ? 'Volver a esta semana' : 'Ver Siguiente Semana'}
+                            {!viewingNextWeek && <ChevronRight size={14} />}
+                        </button>
+                    </div>
+
                     <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
                         {weekDays.map((day, idx) => (
                             <div
                                 key={idx}
                                 onClick={() => setSelectedDate(day.date)}
-                                className={`flex-shrink-0 flex flex-col items-center justify-center w-14 h-20 rounded-2xl transition-all cursor-pointer ${day.active ? 'bg-[#FF1F40] text-white shadow-lg shadow-red-900/30' : 'bg-white dark:bg-[#2A2D3A] opacity-60'}`}
+                                className={`flex-shrink-0 flex flex-col items-center justify-center w-14 h-20 rounded-2xl transition-all cursor-pointer 
+                                    ${day.active
+                                        ? 'bg-[#FF1F40] text-white shadow-lg shadow-red-900/30 scale-105'
+                                        : 'bg-white dark:bg-[#2A2D3A] text-gray-400 border border-gray-100 dark:border-gray-800'
+                                    }`}
                             >
-                                <span className="text-[10px] font-bold uppercase mb-1">{day.day}</span>
-                                <span className="text-xl font-bold">{day.date}</span>
+                                <span className="text-[10px] font-bold uppercase mb-1 opacity-80">{day.day}</span>
+                                <span className="text-xl font-black">{day.date}</span>
                             </div>
                         ))}
                     </div>
                 </section>
 
-                {/* 2. Group Selector (Cards) */}
-                <section>
-                    <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
-                        {availableGroups.map((g) => {
-                            const isSelected = selectedGroup.toLowerCase() === g.name.toLowerCase();
-                            const isAllowed = userProfile?.role === 'admin' ||
-                                (userProfile?.groups || []).map((ug: string) => ug.toLowerCase()).includes(g.name.toLowerCase()) ||
-                                userProfile?.group?.toLowerCase() === g.name.toLowerCase();
-
-                            return (
-                                <button
-                                    key={g.id}
-                                    onClick={() => setSelectedGroup(g.name.toLowerCase())}
-                                    disabled={!isAllowed}
-                                    className={`relative flex-shrink-0 w-36 h-24 rounded-3xl overflow-hidden shadow-md group transition-all 
-                                        ${isSelected ? 'ring-4 ring-[#FF1F40]' : ''}
-                                        ${!isAllowed ? 'opacity-40 grayscale cursor-not-allowed' : ''}
-                                    `}
-                                >
-                                    <img
-                                        src={g.imageUrl || "https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=400&fit=crop"}
-                                        className="absolute inset-0 w-full h-full object-cover brightness-[0.4]"
-                                    />
-                                    <div className="relative z-10 flex flex-col items-center justify-center h-full px-2">
-                                        <span className={`text-white text-[10px] font-black italic px-2 py-1 -rotate-2 break-all text-center leading-tight ${isSelected ? 'bg-[#FF1F40]' : 'bg-black/40'}`}>
-                                            {g.name.toUpperCase()}
-                                        </span>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                        {availableGroups.length === 0 && (
-                            <div className="w-full text-center py-8 opacity-40 text-[10px] font-black uppercase tracking-widest">
-                                No hay grupos configurados
-                            </div>
-                        )}
-                    </div>
-                </section>
+                {/* Group Selector Removed - Auto Assigned */}
 
                 {/* 3. Class List */}
                 <section className="space-y-4">
@@ -345,6 +501,38 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                 </section>
 
             </div>
+
+            {/* ALERT MODAL */}
+            {showAlert && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1F2128] w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Lock size={120} className="transform rotate-12 -translate-y-8 translate-x-8 text-red-500" />
+                        </div>
+
+                        <div className="relative z-10">
+                            <div className="w-16 h-16 bg-red-100 dark:bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-6 mx-auto">
+                                <Lock size={32} />
+                            </div>
+
+                            <h3 className="text-xl font-black text-center mb-2 uppercase italic">Acceso Restringido</h3>
+
+                            <p className="text-center text-gray-500 dark:text-gray-400 text-sm font-medium leading-relaxed mb-8">
+                                Las reservas para la próxima semana se abrirán el <span className="text-red-500 font-bold">Sábado a las 10:00 AM</span>.
+                                <br /><br />
+                                ¡Prepárate para reservar tu plaza!
+                            </p>
+
+                            <button
+                                onClick={() => setShowAlert(false)}
+                                className="w-full bg-[#FF1F40] text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-lg shadow-red-500/30 active:scale-95 transition-transform"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Reusable Bottom Navigation */}
             <BottomNavigation

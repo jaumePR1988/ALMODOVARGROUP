@@ -15,14 +15,26 @@ import {
     Trash2
 } from 'lucide-react';
 import TopHeader from './TopHeader';
-import { db, storage } from '../firebase';
+import { db, storage, auth } from '../firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import ExerciseFormModal from './ExerciseFormModal';
 
 const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
     const navigate = useNavigate();
     const { classId } = useParams();
     const isEditMode = !!classId;
+
+    // Check Role
+    const [userRole, setUserRole] = useState<string>('');
+    useEffect(() => {
+        if (auth.currentUser) {
+            getDoc(doc(db, 'users', auth.currentUser.uid)).then(snap => {
+                if (snap.exists()) setUserRole(snap.data().role);
+            });
+        }
+    }, []);
+    const isCoach = userRole === 'coach';
 
     const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
     const [notifyUsers, setNotifyUsers] = useState(false);
@@ -41,6 +53,7 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
     const [description, setDescription] = useState('');
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [wod, setWod] = useState<any[]>([]); // { exerciseId, exerciseName, sets, reps, notes }
+    const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false);
 
     // Dynamic Data
     const [coaches, setCoaches] = useState<any[]>([]);
@@ -359,12 +372,13 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     <input
                         type="text"
                         value={name}
+                        disabled={isCoach}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ej. Fit Boxing WOD"
                         className={`w-full py-5 px-6 rounded-2xl outline-none font-black text-base transition-all ${isDarkMode
                             ? 'bg-[#2A2D3A] text-white border border-transparent focus:border-[#FF1F40]/30'
                             : 'bg-white text-gray-900 border border-gray-200 shadow-sm focus:border-[#FF1F40]/30'
-                            }`}
+                            } ${isCoach ? 'opacity-50 cursor-not-allowed' : ''}`}
                     />
                 </div>
 
@@ -378,7 +392,7 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                                 className={`p-6 rounded-[2rem] flex flex-col items-center gap-3 transition-all relative ${group === g.name
                                     ? 'bg-[#FF1F40]/5 border-2 border-[#FF1F40] shadow-[0_10px_30px_rgba(255,31,64,0.1)]'
                                     : (isDarkMode ? 'bg-[#2A2D3A] border-2 border-transparent' : 'bg-white border-2 border-gray-50 shadow-sm')
-                                    }`}
+                                    } ${isCoach ? 'pointer-events-none opacity-50' : ''}`}
                             >
                                 {group === g.name && (
                                     <div className="absolute top-3 right-3 w-5 h-5 bg-[#FF1F40] rounded-full flex items-center justify-center text-white scale-110">
@@ -403,10 +417,10 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                             <Calendar size={20} />
                         </div>
                         <input
-                            type="date"
                             value={startDate}
+                            disabled={isCoach}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className={`w-full py-5 pl-14 pr-14 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                            className={`w-full py-5 pl-14 pr-14 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'} ${isCoach ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                     </div>
                 </div>
@@ -416,10 +430,10 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Hora Inicio</h3>
                         <div className={`relative ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm'} rounded-2xl`}>
                             <input
-                                type="time"
                                 value={startTime}
+                                disabled={isCoach}
                                 onChange={(e) => setStartTime(e.target.value)}
-                                className={`w-full py-5 px-6 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                                className={`w-full py-5 px-6 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'} ${isCoach ? 'opacity-50 cursor-not-allowed' : ''}`}
                             />
                             <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-gray-400">
                                 <Clock size={16} />
@@ -430,10 +444,10 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Hora Fin</h3>
                         <div className={`relative ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm'} rounded-2xl`}>
                             <input
-                                type="time"
                                 value={endTime}
+                                disabled={isCoach}
                                 onChange={(e) => setEndTime(e.target.value)}
-                                className={`w-full py-5 px-6 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                                className={`w-full py-5 px-6 rounded-2xl bg-transparent outline-none font-bold text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'} ${isCoach ? 'opacity-50 cursor-not-allowed' : ''}`}
                             />
                             <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-gray-400">
                                 <Clock size={16} />
@@ -444,7 +458,7 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
 
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Días de la semana</h3>
-                    <div className={`flex justify-between items-center px-1 ${isEditMode ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+                    <div className={`flex justify-between items-center px-1 ${(isEditMode || isCoach) ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                         {days.map(d => (
                             <button
                                 key={d.key}
@@ -492,8 +506,9 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                             </div>
                             <select
                                 value={coachId}
+                                disabled={isCoach}
                                 onChange={(e) => setCoachId(e.target.value)}
-                                className={`w-full py-5 pl-12 pr-10 rounded-2xl bg-transparent outline-none font-bold text-sm appearance-none ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                                className={`w-full py-5 pl-12 pr-10 rounded-2xl bg-transparent outline-none font-bold text-sm appearance-none ${isDarkMode ? 'text-white' : 'text-gray-900'} ${isCoach ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <option value="" disabled>Seleccionar Coach</option>
                                 {coaches.map((coach) => (
@@ -509,7 +524,7 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     </div>
                     <div className="col-span-2 space-y-3">
                         <h3 className="text-[10px] font-black tracking-[0.2em] text-gray-500 uppercase">Aforo</h3>
-                        <div className={`flex items-center justify-between w-full h-[60px] px-2 rounded-2xl ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-md border border-gray-100'}`}>
+                        <div className={`flex items-center justify-between w-full h-[60px] px-2 rounded-2xl ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-md border border-gray-100'} ${isCoach ? 'opacity-50 pointer-events-none' : ''}`}>
                             <button
                                 onClick={() => setCapacity(Math.max(1, capacity - 1))}
                                 className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'hover:bg-white/5 text-gray-500' : 'hover:bg-gray-50 text-gray-400'}`}
@@ -536,19 +551,27 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                     <div className={`p-6 rounded-[2.5rem] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30'}`}>
                         <div className="mb-6">
                             <label className="text-[10px] font-black text-gray-400 uppercase ml-1 mb-2 block">Añadir Ejercicio de la biblioteca</label>
-                            <select
-                                onChange={(e) => {
-                                    const ex = libraryExercises.find(x => x.id === e.target.value);
-                                    if (ex) addWodItem(ex);
-                                    e.target.value = "";
-                                }}
-                                className={`w-full ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-50'} rounded-2xl px-4 py-3 outline-none border border-transparent focus:border-[#FF1F40] font-bold text-sm`}
-                            >
-                                <option value="">Seleccionar Ejercicio...</option>
-                                {libraryExercises.map(ex => (
-                                    <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                ))}
-                            </select>
+                            <div className="flex gap-2">
+                                <select
+                                    onChange={(e) => {
+                                        const ex = libraryExercises.find(x => x.id === e.target.value);
+                                        if (ex) addWodItem(ex);
+                                        e.target.value = "";
+                                    }}
+                                    className={`flex-1 ${isDarkMode ? 'bg-[#1F2128]' : 'bg-gray-50'} rounded-2xl px-4 py-3 outline-none border border-transparent focus:border-[#FF1F40] font-bold text-sm`}
+                                >
+                                    <option value="">Seleccionar Ejercicio...</option>
+                                    {libraryExercises.map(ex => (
+                                        <option key={ex.id} value={ex.id}>{ex.name}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={() => setIsExerciseModalOpen(true)}
+                                    className="w-12 h-12 bg-[#FF1F40] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-500/30 active:scale-95 transition-all"
+                                >
+                                    <Plus size={24} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-4">
@@ -642,10 +665,18 @@ const CreateClass = ({ onLogout }: { onLogout: () => void }) => {
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                             {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} strokeWidth={4} />}
                         </div>
-                        {isLoading ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Publicar Clase')}
+                        {isLoading ? 'Guardando...' : (isEditMode ? (isCoach ? 'Actualizar WOD' : 'Guardar Cambios') : 'Publicar Clase')}
                     </button>
                 </div>
             </div>
+
+            <ExerciseFormModal
+                isOpen={isExerciseModalOpen}
+                onClose={() => setIsExerciseModalOpen(false)}
+                onSuccess={() => {
+                    setIsExerciseModalOpen(false);
+                }}
+            />
         </div>
     );
 };

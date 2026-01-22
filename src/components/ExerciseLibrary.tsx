@@ -4,13 +4,12 @@ import {
     Dumbbell, Activity, Info, Loader2, Camera,
     Search, Plus, Trash2, Edit2, Check, X
 } from 'lucide-react';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import {
-    collection, onSnapshot, addDoc, updateDoc,
-    deleteDoc, doc, query, orderBy
+    collection, onSnapshot, deleteDoc, doc, query, orderBy
 } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import TopHeader from './TopHeader';
+import ExerciseFormModal from './ExerciseFormModal';
 
 interface Exercise {
     id: string;
@@ -236,7 +235,7 @@ const ExerciseLibrary = () => {
                 </div>
 
                 <button
-                    onClick={() => { resetForm(); setIsModalOpen(true); }}
+                    onClick={() => { setEditingExercise(null); setIsModalOpen(true); }}
                     className="w-full bg-[#FF1F40] py-5 rounded-[1.5rem] flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(255,31,64,0.3)] active:scale-95 transition-all text-white"
                 >
                     <Plus size={24} strokeWidth={3} />
@@ -268,11 +267,6 @@ const ExerciseLibrary = () => {
                                     <button
                                         onClick={() => {
                                             setEditingExercise(ex);
-                                            setName(ex.name);
-                                            setDescription(ex.description);
-                                            setCategory(ex.category);
-                                            setTargetMuscle(ex.targetMuscle || '');
-                                            setImagePreview(ex.imageUrl || null);
                                             setIsModalOpen(true);
                                         }}
                                         className="p-2 text-gray-500 hover:text-blue-500 transition-colors"
@@ -296,62 +290,12 @@ const ExerciseLibrary = () => {
                 </div>
             </div>
 
-            {/* Modal de Ejercicio */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-                    <div className={`relative w-full max-w-sm ${isDarkMode ? 'bg-[#262932]' : 'bg-white'} rounded-[3rem] p-8 shadow-2xl animate-in zoom-in-95 duration-200`}>
-                        <h3 className="text-xl font-black italic uppercase mb-6">{editingExercise ? 'Editar' : 'Nuevo'} Ejercicio</h3>
-                        <form onSubmit={handleSave} className="space-y-4">
-                            <div>
-                                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 mb-2 block">Nombre</label>
-                                <input
-                                    required value={name} onChange={e => setName(e.target.value)}
-                                    className={`w-full ${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-100 border-gray-200'} rounded-2xl px-5 py-4 outline-none border focus:border-[#FF1F40] font-bold`}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 mb-2 block">Categoría</label>
-                                <select
-                                    value={category} onChange={e => setCategory(e.target.value)}
-                                    className={`w-full ${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-100 border-gray-200'} rounded-2xl px-5 py-4 outline-none border focus:border-[#FF1F40] font-bold`}
-                                >
-                                    <option>Fuerza</option>
-                                    <option>Endurance</option>
-                                    <option>Gymnastics</option>
-                                    <option>WOD</option>
-                                    <option>Movilidad</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 mb-2 block">Músculo Objetivo</label>
-                                <input
-                                    value={targetMuscle} onChange={e => setTargetMuscle(e.target.value)}
-                                    className={`w-full ${isDarkMode ? 'bg-[#1F2128] border-white/5' : 'bg-gray-100 border-gray-200'} rounded-2xl px-5 py-4 outline-none border focus:border-[#FF1F40] font-bold`}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 mb-2 block">Imagen (Opcional)</label>
-                                <label className={`aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer overflow-hidden relative ${isDarkMode ? 'border-gray-700 bg-black/20' : 'bg-gray-50 border-gray-200'}`}>
-                                    <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                                    {imagePreview ? (
-                                        <img src={imagePreview} className="absolute inset-0 w-full h-full object-cover" alt="Preview" />
-                                    ) : (
-                                        <>
-                                            <Camera size={24} className="text-gray-400" />
-                                            <span className="text-[8px] font-black uppercase text-gray-500">Subir Demo</span>
-                                        </>
-                                    )}
-                                </label>
-                            </div>
-                            <button type="submit" disabled={isSaving} className="w-full bg-[#FF1F40] py-4 rounded-2xl text-white font-black uppercase tracking-widest shadow-lg shadow-red-900/30 flex items-center justify-center gap-2">
-                                {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
-                                Guardar Ejercicio
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <ExerciseFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                editingExercise={editingExercise}
+                onSuccess={() => setIsModalOpen(false)}
+            />
         </div>
     );
 };

@@ -7,18 +7,15 @@ import {
     MessageSquare,
     Settings,
     User,
-    Bell,
     Activity,
     Users,
     Zap,
-    ClipboardList,
-    LayoutGrid,
-    Upload
+    Newspaper
 } from 'lucide-react';
 
 interface BottomNavigationProps {
     role: 'admin' | 'coach' | 'user' | string;
-    activeTab: 'home' | 'agenda' | 'notifications' | 'settings' | 'profile' | 'users' | 'inbox' | 'messages';
+    activeTab: 'home' | 'agenda' | 'notifications' | 'settings' | 'profile' | 'users' | 'inbox' | 'messages' | 'news';
 }
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) => {
@@ -34,11 +31,13 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) 
             { icon: <Activity size={20} />, label: 'Reports', path: '/reports' },
             { icon: <Zap size={20} />, label: 'Ejercicios', path: '/exercise-library' },
             { icon: <Settings size={20} />, label: 'Accesos', path: '/notification-settings' },
+            { icon: <MessageSquare size={20} />, label: 'Enviar', path: '/send-notification' },
         ],
         coach: [
             { icon: <Calendar size={22} />, label: 'Agenda', path: '/agenda' },
             { icon: <Zap size={22} />, label: 'WOD', path: '#' },
             { icon: <Activity size={22} />, label: '+Ejercicio', path: '#' },
+            { icon: <MessageSquare size={22} />, label: 'Enviar', path: '/send-notification' },
             { icon: <User size={22} />, label: 'Perfil', path: '#' },
         ],
         user: [
@@ -71,7 +70,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) 
                     onClick={() => setShowMenu(false)}
                 >
                     <div className="absolute bottom-40 left-1/2 -translate-x-1/2 w-full max-w-[440px] pointer-events-none">
-                        {currentMenuItems.map((item, i) => {
+                        {currentMenuItems.map((item: any, i: number) => {
                             // Symmetrical ark centered at 90 degrees
                             const totalItems = currentMenuItems.length;
                             const angleRange = totalItems > 3 ? 160 : 120; // Wider for more items
@@ -120,7 +119,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) 
                     >
                         <Home size={26} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
                         <span className="text-[10px] font-bold tracking-wide">
-                            {normalizedRole === 'user' ? 'Box' : 'Inicio'}
+                            {normalizedRole === 'user' ? 'Inicio' : 'Inicio'}
                         </span>
                     </button>
 
@@ -143,44 +142,23 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) 
                         </button>
                     </div>
 
-                    {/* 4. FOURTH BUTTON (Role specific) */}
-                    {normalizedRole === 'admin' ? (
-                        <button onClick={() => navigate('/admin-messages')} className={getButtonClass('messages')}>
-                            <MessageSquare size={26} strokeWidth={2} />
-                            <span className="text-[10px] font-bold tracking-wide">Mensajes</span>
-                        </button>
-                    ) : normalizedRole === 'coach' ? (
-                        <button onClick={() => navigate('/coach-inbox')} className={getButtonClass('inbox')}>
-                            <MessageSquare size={26} strokeWidth={2} />
-                            <span className="text-[10px] font-bold tracking-wide">Inbox</span>
-                        </button>
-                    ) : (
-                        <button onClick={() => navigate('/profile')} className={getButtonClass('profile')}>
-                            <Activity size={26} strokeWidth={2} />
-                            <span className="text-[10px] font-bold tracking-wide">Perfil</span>
-                        </button>
-                    )}
+                    {/* 4. NEWS BUTTON (Replaces Messages/Inbox/Profile duplication) */}
+                    <button
+                        onClick={() => navigate('/news')}
+                        className={getButtonClass('news')}
+                    >
+                        <Newspaper size={26} strokeWidth={activeTab === 'news' ? 2.5 : 2} />
+                        <span className="text-[10px] font-bold tracking-wide">Noticias</span>
+                    </button>
 
-                    {/* 5. FIFTH BUTTON (Role specific) */}
-                    {normalizedRole === 'admin' ? (
-                        <button onClick={() => navigate('/admin-settings')} className={getButtonClass('settings')}>
-                            <Settings size={26} strokeWidth={2} />
-                            <span className="text-[10px] font-bold tracking-wide">Ajustes</span>
-                        </button>
-                    ) : normalizedRole === 'coach' ? (
-                        <button onClick={() => navigate('/coach-settings')} className={getButtonClass('settings')}>
-                            <Settings size={26} strokeWidth={2} />
-                            <span className="text-[10px] font-bold tracking-wide">Ajustes</span>
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => navigate('/notifications')}
-                            className={getButtonClass('notifications')}
-                        >
-                            <User size={26} strokeWidth={2} />
-                            <span className="text-[10px] font-bold tracking-wide">Cuenta</span>
-                        </button>
-                    )}
+                    {/* 5. PROFILE BUTTON (Always visible) */}
+                    <button
+                        onClick={() => navigate('/profile')}
+                        className={getButtonClass('profile')}
+                    >
+                        <User size={26} strokeWidth={activeTab === 'profile' ? 2.5 : 2} />
+                        <span className="text-[10px] font-bold tracking-wide">Perfil</span>
+                    </button>
 
                 </div>
             </nav>

@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 // @ts-ignore
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import BottomNavigation from './components/BottomNavigation';
+import PremiumModal from './components/PremiumModal';
 import TopHeader from './components/TopHeader';
 import { db, auth } from './firebase';
 import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs } from 'firebase/firestore';
@@ -27,63 +28,33 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const navigate = useNavigate();
   // 1. Configuración General: Dark Mode by default
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-  const [weekDays, setWeekDays] = useState<{ day: string; date: string; fullDate: string; active: boolean }[]>([]);
+  const [weekDays, setWeekDays] = useState<{ day: string; date: string; active: boolean }[]>([]);
 
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().getDate().toString());
-  const [classList, setClassList] = useState<any[]>([]);
-  const [nextClass, setNextClass] = useState<any>(null);
-  const [userReservations, setUserReservations] = useState<{ [key: string]: string }>({}); // classId -> status
-  const [pendingPromotion, setPendingPromotion] = useState<any>(null);
-
-  // State for user info
+  // State
+  const [userReservations, setUserReservations] = useState<{ id: string; data: any; classData?: any }[]>([]);
   const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [selectedClassForWod, setSelectedClassForWod] = useState<any>(null); // For WOD Modal
+  const [pendingPromotion, setPendingPromotion] = useState<any>(null);
 
-  // Helper: Saturday 10:00 AM Rule
-  const isReservationAllowed = (targetDateStr: string) => {
-    const now = new Date();
-    const targetDate = new Date(targetDateStr);
-
-    // Get current week's Sunday
-    const currentSunday = new Date();
-    const dayOfWeek = currentSunday.getDay(); // 0 (Sun) to 6 (Sat)
-    const diffToSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-    currentSunday.setDate(currentSunday.getDate() + diffToSunday);
-    currentSunday.setHours(23, 59, 59, 999);
-
-    // If target date is within current week (up to Sunday), it's always allowed
-    if (targetDate <= currentSunday) return true;
-
-    // If it's for next week, check if it's Saturday after 10:00 AM
-    // Find last Saturday relative to next week's start (which is next Monday)
-    // Actually, simple: is today Saturday (6) and time > 10:00?
-    // Or is today Sunday (0)?
-    const isSaturdayPast10 = now.getDay() === 6 && now.getHours() >= 10;
-    const isSunday = now.getDay() === 0;
-
-    return isSaturdayPast10 || isSunday;
-  };
+  // MODAL STATE
+  const [modalConfig, setModalConfig] = useState<any>({ isOpen: false, type: 'info', title: '', message: '' });
 
   useEffect(() => {
-    // Rely on App.tsx for auth state and redirection
-    if (auth.currentUser) {
-      setUserId(auth.currentUser.uid);
-    }
+    const un = auth.onAuthStateChanged((user) => {
+      if (user) setUserId(user.uid);
+    });
+    return () => un();
   }, []);
 
   useEffect(() => {
     if (!userId) return;
     const unsubscribe = onSnapshot(doc(db, 'users', userId), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        setCurrentUserData(data);
-
-      }
+      if (doc.exists()) setCurrentUserData(doc.data());
     });
     return () => unsubscribe();
   }, [userId]);
 
+  // Dark Mode Observer
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -96,337 +67,343 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
     return () => observer.disconnect();
   }, []);
 
+  // --- LAZY CREDIT RESET LOGIC (SAT 09:00 AM) ---
   useEffect(() => {
-    // Generate Rolling 7-Day Window starting Today
+    if (!userId || !currentUserData) return;
+
+    const checkCreditReset = async () => {
+      const now = new Date();
+      const lastReset = currentUserData.lastResetDate ? new Date(currentUserData.lastResetDate) : null;
+
+      // Calculate Target: Last Saturday at 09:00 AM
+      const target = new Date(now);
+      const day = target.getDay(); // 0=Sun, 6=Sat
+      const diff = (day + 1) % 7; // Distance from Sat (Sat=0, Sun=1, Fri=6)
+      // Wait, correct math:
+      // If today is Sat (6) and hour >= 9: target is today 9am.
+      // If today is Sat (6) and hour < 9: target is prev Sat 9am.
+      // If today is Fri (5): target is last Sat.
+
+      // Let's normalize to "Most recent Saturday 09:00"
+      // Move back to Saturday
+      const daysSinceSat = (day + 1) % 7; // Sat=0, Sun=1, Mon=2...
+      // Actually simpler: 
+      // Sat is 6. 
+      // If today is 0 (Sun), last sat was 1 day ago.
+      // If today is 1 (Mon), last sat was 2 days ago.
+      // If today is 6 (Sat), last sat was 0 days ago (potential match).
+
+      const dist = (day + 7 - 6) % 7; // Sun(0)->1, Sat(6)->0, Fri(5)->6
+      target.setDate(now.getDate() - dist);
+      target.setHours(9, 0, 0, 0);
+
+      // If 'now' is before 'target' (i.e. we are on Saturday morning before 9am), 
+      // then the *valid* reset target was actually a week ago.
+      if (now < target) {
+        target.setDate(target.getDate() - 7);
+      }
+
+      // Logic
+      if (!lastReset || lastReset < target) {
+        console.log("🔄 Resetting Credits...");
+        const planCredits = currentUserData.planCredits || 2; // Default 2
+
+        try {
+          await updateDoc(doc(db, 'users', userId), {
+            credits: planCredits,
+            lastResetDate: new Date().toISOString()
+          });
+          // Small notification?
+          setModalConfig({
+            isOpen: true,
+            type: 'success',
+            title: '¡Semana Nueva!',
+            message: `Tus créditos se han restablecido a ${planCredits}.`,
+            onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false }))
+          });
+        } catch (e) {
+          console.error("Error resting credits", e);
+        }
+      }
+    };
+
+    checkCreditReset();
+  }, [userId, currentUserData?.lastResetDate]); // Depend on lastResetDate to avoid loop? No, Firestore update triggers generic snapshot.
+  // currentUserData changes on snapshot. logic must be idempotent-ish or check strict date.
+  // 'lastReset < target' prevents checking again if we just updated it to 'now' (which is > target).
+  // Perfect.
+
+  // Generate Fixed Week Strip (Visual Only)
+  useEffect(() => {
     const days = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
     const today = new Date();
+    // Monday-Sunday fixed view? Or rolling? User said "fijo solo para saber en que dia estamos".
+    // Let's do current week Monday - Sunday
+    const d = new Date(today);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
 
-    const generatedWeek = Array.from({ length: 10 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dayName = days[d.getDay()];
+    const generated = Array.from({ length: 7 }, (_, i) => {
+      const current = new Date(monday);
+      current.setDate(monday.getDate() + i);
+      const isToday = current.getDate() === today.getDate() && current.getMonth() === today.getMonth();
 
       return {
-        day: dayName,
-        date: d.getDate().toString(),
-        fullDate: d.toISOString().split('T')[0],
-        active: d.getDate().toString() === selectedDate
+        day: days[current.getDay()],
+        date: current.getDate().toString(),
+        active: isToday
       };
     });
-
-    setWeekDays(generatedWeek);
-  }, [selectedDate]);
-
-  // Fetch classes for Agenda
-  useEffect(() => {
-    const userGroups = currentUserData?.groups || (currentUserData?.group ? [currentUserData?.group] : []);
-    if (userGroups.length === 0) return;
-
-    // Filter by group in query - Support multiple groups
-    const q = query(
-      collection(db, 'classes'),
-      where('group', 'in', userGroups)
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      let classesData: any[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      // Filter real data by selected date
-      const activeDay = weekDays.find(d => d.date === selectedDate);
-      if (activeDay) {
-        classesData = classesData.filter(c => c.date === activeDay.fullDate);
-      }
-
-      // Sort by time
-      classesData.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
-
-      setClassList(classesData);
-    }, (error) => {
-      console.error("Firestore error in UserDashboard:", error);
-    });
-    return () => unsubscribe();
-  }, [currentUserData?.groups, currentUserData?.group, selectedDate, weekDays]);
-
-  // Fetch user reservations
-  useEffect(() => {
-    const q = query(collection(db, 'reservations'), where('userId', '==', userId));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const resMap: { [key: string]: string } = {};
-      let promotionFound = null;
-
-      querySnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        resMap[data.classId] = data.status || 'confirmed'; // Default to confirmed for backward compat
-
-        // Check for pending promotion
-        if (data.status === 'pending_confirmation') {
-          promotionFound = { id: doc.id, ...data };
-        }
-      });
-      setUserReservations(resMap);
-      setPendingPromotion(promotionFound); // Set global alert state
-
-      // If there are reservations, fetch the first one for "Next Class"
-      const confirmedIds = Object.keys(resMap).filter(id => resMap[id] === 'confirmed');
-      if (confirmedIds.length > 0) {
-        // Just for demo, take the first one. 
-        const firstClassId = confirmedIds[0];
-        const classRef = query(collection(db, 'classes'), limit(50)); // Simple fetch
-        onSnapshot(classRef, (snap) => {
-          const found = snap.docs.find(d => d.id === firstClassId);
-          if (found) setNextClass({ id: found.id, ...found.data() });
-        });
-      } else {
-        setNextClass(null);
-      }
-    });
-    return () => unsubscribe();
+    setWeekDays(generated);
   }, []);
 
-  // Handle Reservation / Waitlist / Confirmation
-  const handleReserve = async (classId: string, current: number, max: number) => {
-    // If already confirmed or in queue, this button acts as Cancel (logic handled in UI usually, but double check)
-    if (userReservations[classId]) {
-      return;
-    }
+  // Fetch "Mis Reservas" (Reservations Joined with Classes)
+  useEffect(() => {
+    if (!userId) return;
+    const q = query(collection(db, 'reservations'), where('userId', '==', userId));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      // 1. Get all reservation docs
+      const resDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // SATURDAY 10:00 AM RULE
-    const activeDay = weekDays.find(d => d.date === selectedDate);
-    if (activeDay && !isReservationAllowed(activeDay.fullDate)) {
-      alert("⚠️ Las reservas para la próxima semana todavía no están abiertas.\n\nSe abrirán oficialmente el SÁBADO a las 10:00h.");
-      return;
-    }
+      // 2. Fetch associated class data
+      const fullData = await Promise.all(resDocs.map(async (res: any) => {
+        const classSnap = await getDoc(doc(db, 'classes', res.classId));
+        return {
+          id: res.id,
+          data: res,
+          classData: classSnap.exists() ? { id: classSnap.id, ...classSnap.data() } : null
+        };
+      }));
 
-    try {
-      if (current >= max) {
-        // JOIN WAITLIST
-        await addDoc(collection(db, 'reservations'), {
-          userId,
-          classId,
-          reservedAt: new Date().toISOString(),
-          status: 'waitlist'
-        });
-        alert("¡Te has unido a la lista de espera! Te avisaremos si queda un sitio libre.");
-      } else {
-        // CONFIRM RESERVATION
-        await addDoc(collection(db, 'reservations'), {
-          userId,
-          classId,
-          reservedAt: new Date().toISOString(),
-          status: 'confirmed'
+      // Filter out invalid/past classes if needed, or keep all. 
+      // User said "ves las clases de la semana".
+      // Let's sort by date/time
+      const validClasses = fullData
+        .filter(item => item.classData) // Ensure class exists
+        .sort((a, b) => {
+          // Compare dates: item.classData.date + item.classData.startTime
+          const dateA = new Date(`${a.classData.date}T${a.classData.startTime}`);
+          const dateB = new Date(`${b.classData.date}T${b.classData.startTime}`);
+          return dateA.getTime() - dateB.getTime();
         });
 
-        // Decrement capacity
-        const classRef = doc(db, 'classes', classId);
-        await updateDoc(classRef, {
-          currentCapacity: increment(1)
-        });
+      console.log("UserDashboard: Fetched Reservations", validClasses.length, validClasses);
+
+      setUserReservations(validClasses as any);
+
+      // Check pending promotion logic
+      const pending = validClasses.find((r: any) => r.data.status === 'pending_confirmation');
+      setPendingPromotion(pending ? pending.data : null);
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+
+  // Clean handlers for cancel/accept from generic list
+  const handleCancelReservation = async (resId: string, classId: string) => {
+    // 0. Fetch class details for time check
+    const classSnap = await getDoc(doc(db, 'classes', classId));
+    if (!classSnap.exists()) return;
+    const classData = classSnap.data();
+
+    // 1. Calculate time difference
+    const classDate = new Date(`${classData.date}T${classData.startTime}`);
+    const now = new Date();
+    const diffMs = classDate.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    // 2. Define Action
+    const executeCancel = async () => {
+      try {
+        const resRef = doc(db, 'reservations', resId);
+        const resSnap = await getDoc(resRef);
+        const status = resSnap.data()?.status;
+
+        await deleteDoc(resRef);
+
+        if (status === 'confirmed') {
+          if (diffHours >= 1) {
+            await updateDoc(doc(db, 'users', userId!), { credits: increment(1) });
+            setModalConfig({ isOpen: true, type: 'success', title: 'Cancelación Exitosa', message: 'Se ha devuelto 1 crédito a tu cuenta.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+          } else {
+            setModalConfig({ isOpen: true, type: 'warning', title: 'Cancelación Tardía', message: 'Reserva cancelada sin devolución de crédito (<1h).', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+          }
+
+          const wq = query(collection(db, 'reservations'), where('classId', '==', classId), where('status', '==', 'waitlist'), limit(1));
+          const wSnap = await getDocs(wq);
+          if (!wSnap.empty) {
+            await updateDoc(wSnap.docs[0].ref, { status: 'pending_confirmation', promotedAt: new Date().toISOString() });
+          } else {
+            await updateDoc(doc(db, 'classes', classId), { currentCapacity: increment(-1) });
+          }
+        }
+      } catch (e) {
+        console.error(e);
       }
+    };
 
-    } catch (error) {
-      console.error("Error reserving: ", error);
+    // 3. Trigger Modal
+    if (diffHours < 1) {
+      setModalConfig({
+        isOpen: true,
+        type: 'danger',
+        title: '¿Cancelar Ahora?',
+        message: '⚠️ Queda MENOS DE 1 HORA para la clase.\n\nSi cancelas ahora, NO SE TE DEVOLVERÁ el crédito.',
+        confirmText: 'Sí, Cancelar y Perder Crédito',
+        cancelText: 'No, Mantener',
+        onConfirm: executeCancel
+      });
+    } else {
+      setModalConfig({
+        isOpen: true,
+        type: 'info',
+        title: 'Confirmar Cancelación',
+        message: '¿Seguro que quieres cancelar?\nSe te devolverá 1 Crédito.',
+        confirmText: 'Sí, Cancelar',
+        cancelText: 'No',
+        onConfirm: executeCancel
+      });
     }
   };
 
-  // Accept Promotion
-  const handleAcceptPromotion = async (reservationId: string) => {
-    try {
-      // 1. Check if reservation is allowed for this date (Saturday 10AM rule)
-      const res = await getDoc(doc(db, 'reservations', reservationId));
-      if (res.exists()) {
-        const classId = res.data().classId;
-        const classSnap = await getDoc(doc(db, 'classes', classId));
-        if (classSnap.exists()) {
-          const classData = classSnap.data();
-          if (!isReservationAllowed(classData.date)) {
-            alert("Las reservas para la próxima semana abren el sábado a las 10:00h");
-            return;
-          }
-        }
-      }
 
-      // 2. Update Reservation Status
-      await updateDoc(doc(db, 'reservations', reservationId), {
-        status: 'confirmed'
+  // --- DEV TOOLS: GENERATE EXAMPLES ---
+  const generateExamples = async () => {
+    if (!confirm("⚠️ Se borrarán tus reservas actuales y se crearán 4 ejemplos probeta. ¿Continuar?")) return;
+    if (!userId) return;
+
+    try {
+      // 1. Clear current reservations
+      const q = query(collection(db, 'reservations'), where('userId', '==', userId));
+      const snap = await getDocs(q);
+      for (const d of snap.docs) await deleteDoc(d.ref);
+
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+      const dateStr = tomorrow.toISOString().split('T')[0];
+
+      // 2. Class A: Normal Confirmation (>1h)
+      const classARef = await addDoc(collection(db, 'classes'), {
+        name: "WOD Probeta (Normal)",
+        date: dateStr,
+        startTime: "10:00",
+        group: "box",
+        coachId: "test-coach",
+        maxCapacity: 12,
+        currentCapacity: 5
+      });
+      await addDoc(collection(db, 'reservations'), { userId, classId: classARef.id, status: 'confirmed', reservedAt: new Date().toISOString() });
+
+      // 3. Class B: Late Cancel (<1h)
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 45); // Starts in 45 mins
+      const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const classBRef = await addDoc(collection(db, 'classes'), {
+        name: "WOD Late Cancel (<1h)",
+        date: todayStr,
+        startTime: timeStr,
+        group: "box",
+        coachId: "test-coach",
+        maxCapacity: 12,
+        currentCapacity: 10
+      });
+      await addDoc(collection(db, 'reservations'), { userId, classId: classBRef.id, status: 'confirmed', reservedAt: new Date().toISOString() });
+
+      // 4. Class C: Waitlist
+      const classCRef = await addDoc(collection(db, 'classes'), {
+        name: "WOD Full (Waitlist)",
+        date: dateStr,
+        startTime: "12:00",
+        group: "box",
+        coachId: "test-coach",
+        maxCapacity: 12,
+        currentCapacity: 12 // Full
+      });
+      await addDoc(collection(db, 'reservations'), { userId, classId: classCRef.id, status: 'waitlist', reservedAt: new Date().toISOString() });
+
+
+      // 5. Class D: Pending Confirmation (Promoted)
+      const classDRef = await addDoc(collection(db, 'classes'), {
+        name: "WOD Promocionado",
+        date: dateStr,
+        startTime: "18:00",
+        group: "box",
+        coachId: "test-coach",
+        maxCapacity: 12,
+        currentCapacity: 11 // Spot held
+      });
+      await addDoc(collection(db, 'reservations'), { userId, classId: classDRef.id, status: 'pending_confirmation', reservedAt: new Date().toISOString(), promotedAt: new Date().toISOString() });
+
+      setModalConfig({ isOpen: true, type: 'success', title: 'Ejemplos Generados', message: 'Revisa "Mis Reservas" para probar los flujos.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+
+    } catch (e) {
+      console.error(e);
+      setModalConfig({ isOpen: true, type: 'danger', title: 'Error', message: 'Error generando ejemplos.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
+    }
+  };
+
+  const resetAccount = async () => {
+    if (!confirm("⚠️ SE BORRARÁN TODAS TUS RESERVAS Y SE PONDRÁN LOS CRÉDITOS A 2. ¿Confirmar?")) return;
+    if (!userId) return;
+
+    try {
+      const q = query(collection(db, 'reservations'), where('userId', '==', userId));
+      const snap = await getDocs(q);
+      for (const d of snap.docs) await deleteDoc(d.ref);
+
+      await updateDoc(doc(db, 'users', userId), {
+        credits: 2,
+        planCredits: 2,
+        lastResetDate: new Date().toISOString()
       });
 
-      // 2. DO NOT Increment Class Capacity
-      // Logic: The spot was "held" (not decremented) when the previous user canceled.
-      // So we just confirm the seat.
+      setModalConfig({ isOpen: true, type: 'success', title: 'Cuenta Reseteada', message: 'Tus reservas se han borrado y tienes 2 créditos.', onConfirm: () => setModalConfig((prev: any) => ({ ...prev, isOpen: false })) });
 
-      setPendingPromotion(null);
-      alert("¡Plaza confirmada! Nos vemos en clase.");
-
-    } catch (error) {
-      console.error("Error confirming promotion:", error);
+    } catch (e) {
+      console.error(e);
+      alert("Error al resetear cuenta.");
     }
   };
-
-
-  // Handle Cancel (Complex Logic: Promote next user)
-  const handleCancel = async (classId: string) => {
-    if (!confirm("¿Seguro que quieres cancelar tu reserva?")) return;
-
-    try {
-      // 1. Find the user's reservation doc
-      const q = query(collection(db, 'reservations'), where('userId', '==', userId), where('classId', '==', classId));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) return;
-
-      const reservationDoc = snapshot.docs[0];
-      const status = reservationDoc.data().status || 'confirmed';
-
-      // 2. Delete reservation (FREES THE USER, BUT MAYBE NOT THE SPOT YET)
-      await deleteDoc(reservationDoc.ref);
-
-      // 3. Logic: If it was 'confirmed', we opened a spot. Check Waitlist.
-      if (status === 'confirmed') {
-
-        // 4. FIND NEXT IN WAITLIST FIRST
-        const wq = query(
-          collection(db, 'reservations'),
-          where('classId', '==', classId),
-          where('status', '==', 'waitlist'),
-          orderBy('reservedAt', 'asc'),
-          limit(1)
-        );
-        const waitlistSnap = await getDocs(wq);
-
-        if (!waitlistSnap.empty) {
-          // STRICT PRIORITY: DO NOT DECREMENT CAPACITY
-          // The spot stays "Full" in the counter, preventing snipers.
-          // We assign this "ghost spot" to the next user.
-
-          const nextUser = waitlistSnap.docs[0];
-          await updateDoc(nextUser.ref, {
-            status: 'pending_confirmation',
-            promotedAt: new Date().toISOString()
-          });
-          // Notification: In-App alert will appear for this user.
-        } else {
-          // NO WAITLIST: FREE THE SPOT GLOBALLY
-          const classRef = doc(db, 'classes', classId);
-          await updateDoc(classRef, {
-            currentCapacity: increment(-1)
-          });
-        }
-
-      } else {
-        // If it was 'waitlist' or 'pending', just removed. No capacity change needed.
-        // If 'pending', we might want to trigger next in line? Yes.
-        if (status === 'pending_confirmation') {
-          // Same logic as above: find next waitlist.
-          const wq = query(
-            collection(db, 'reservations'),
-            where('classId', '==', classId),
-            where('status', '==', 'waitlist'),
-            orderBy('reservedAt', 'asc'),
-            limit(1)
-          );
-          const waitlistSnap = await getDocs(wq);
-          if (!waitlistSnap.empty) {
-            await updateDoc(waitlistSnap.docs[0].ref, {
-              status: 'pending_confirmation',
-              promotedAt: new Date().toISOString()
-            });
-          } else {
-            // If NO ONE else in waitlist, and a PENDING user cancels, 
-            // we MUST decrement capacity because that held spot is now truly free.
-            const classRef = doc(db, 'classes', classId);
-            await updateDoc(classRef, {
-              currentCapacity: increment(-1)
-            });
-          }
-        }
-      }
-
-    } catch (error) {
-      console.error("Error canceling:", error);
-    }
-  };
-
-  const handleExportPDF = (classData: any) => {
-    const doc = new jsPDF();
-    const logoUrl = "https://raw.githubusercontent.com/lucide-react/lucide/main/icons/dumbbell.png"; // Placeholder for Logo
-
-    // Styling
-    doc.setFillColor(255, 31, 64); // Brand Red
-    doc.rect(0, 0, 210, 40, 'F');
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
-    doc.text("ALMODOVAR BOX", 105, 15, { align: "center" });
-
-    doc.setFontSize(10);
-    doc.text("CENTRO DE ALTO RENDIMIENTO", 105, 22, { align: "center" });
-    doc.text(`Sesión: ${classData.name} • ${classData.date}`, 105, 30, { align: "center" });
-
-    doc.setTextColor(50, 50, 50);
-    doc.setFontSize(12);
-    doc.text(`Coach: ${classData.coachId?.split('-')[1] || 'Staff'}`, 15, 55);
-    doc.text(`Grupo: ${classData.group}`, 150, 55);
-
-    doc.setDrawColor(200, 200, 200);
-    doc.line(15, 60, 195, 60);
-
-    const tableData = (classData.wod || []).map((item: any) => [
-      item.exerciseName,
-      item.sets,
-      item.reps,
-      item.notes
-    ]);
-
-    (doc as any).autoTable({
-      startY: 70,
-      head: [['EJERCICIO', 'SETS', 'REPES', 'NOTAS']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [255, 31, 64], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 5 },
-      columnStyles: {
-        0: { fontStyle: 'bold', width: 60 }
-      }
-    });
-
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    const finalY = (doc as any).lastAutoTable.finalY + 20;
-    doc.text("Generado por Almodovar App v2.1", 105, finalY, { align: "center" });
-
-    doc.save(`WOD_${classData.name}_${classData.date}.pdf`);
-  };
-
-  // Redundant theme/logout removed (now in TopHeader)
-
 
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-[#1F2128] text-white' : 'bg-[#F3F4F6] text-gray-900'} font-sans pb-32 overflow-x-hidden`}>
-      {/* Mobile Wrapper: max-w-md mx-auto */}
+      <PremiumModal
+        isOpen={modalConfig.isOpen}
+        type={modalConfig.type}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        cancelText={modalConfig.cancelText}
+        onConfirm={modalConfig.onConfirm}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+      />
       <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
 
-        {/* Global Notification for Pending Promotion */}
+        {/* Global Notification */}
         {pendingPromotion && (
-          <div className="bg-[#FF1F40] text-white p-4 rounded-2xl shadow-xl animate-pulse cursor-pointer" onClick={() => handleAcceptPromotion(pendingPromotion.id, pendingPromotion.classId)}>
+          <div
+            onClick={() => handleAcceptPromotion(userReservations.find((r: any) => r.data.status === 'pending_confirmation')?.id || "")}
+            className="bg-[#FF1F40] text-white p-4 rounded-2xl shadow-xl animate-pulse cursor-pointer hover:scale-105 transition-transform"
+          >
             <div className="flex items-center gap-3">
               <Bell size={24} className="animate-bounce" />
               <div>
                 <h3 className="font-black text-xs uppercase tracking-widest">¡Plaza Disponible!</h3>
-                <p className="text-xs font-medium">Se ha liberado un hueco en tu clase. Toca para confirmar.</p>
+                <p className="text-xs font-medium">Revisa tu agenda para confirmar.</p>
               </div>
             </div>
           </div>
         )}
 
-
-        {/* Header Unificado */}
+        {/* Header */}
         <TopHeader
-          title="Almodovar Group"
-          subtitle="v2.1 • Hola, Jaume 👋"
+          title={`Hola, ${currentUserData?.displayName ? currentUserData.displayName.split(' ')[0] : 'Atleta'} 👋`}
+          subtitle="Panel Principal"
+          avatarText={currentUserData?.displayName ? currentUserData.displayName.charAt(0) : "U"}
+          profileImage={currentUserData?.photoURL}
           showNotificationDot={!!pendingPromotion}
           onLogout={onLogout}
         />
@@ -434,331 +411,123 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
         {/* 3. Créditos (Grid 2 col) */}
         <section className="grid grid-cols-2 gap-4">
           <div className="bg-white dark:bg-[#2A2D3A] p-5 rounded-3xl shadow-sm flex flex-col justify-between h-32">
-            <span className="text-4xl font-black text-[#FF1F40]">12</span>
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Clases este mes</span>
+            <span className="text-4xl font-black text-[#FF1F40]">{currentUserData?.credits || 0}</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Créditos Disponibles</span>
           </div>
           <div className="bg-white dark:bg-[#2A2D3A] p-5 rounded-3xl shadow-sm flex flex-col justify-between h-32">
-            <span className="text-4xl font-black text-gray-900 dark:text-white">3</span>
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Clases restantes</span>
+            <span className="text-4xl font-black text-gray-900 dark:text-white">{userReservations.length}</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Reservas Activas</span>
           </div>
         </section>
 
-        {/* 4. Calendario Horizontal (Strip) */}
-        <section>
-          <div className="flex justify-between items-end mb-2">
-            <h2 className="text-lg font-bold dark:text-white">Esta semana</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
-            {weekDays.map((day, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedDate(day.date)}
-                className={`
-                  flex-shrink-0 flex flex-col items-center justify-center w-14 h-20 rounded-2xl transition-all cursor-pointer
-                  ${day.active
-                    ? 'bg-[#FF1F40] text-white shadow-lg shadow-red-900/30'
-                    : `rounded-[2rem] overflow-hidden ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
-                `}
-              >
-                <span className="text-[10px] font-bold uppercase mb-1">{day.day}</span>
-                <span className="text-xl font-bold">{day.date}</span>
+        {/* 1. Calendar Fixed Strip + Group Badge */}
+        <section className="flex flex-col gap-4">
+          {/* Read-Only Calendar */}
+          <div className="bg-white dark:bg-[#2A2D3A] p-4 rounded-[2rem] shadow-sm flex justify-between items-center relative overflow-hidden">
+            {weekDays.map((d, i) => (
+              <div key={i} className={`flex flex-col items-center justify-center w-8 z-10 ${d.active ? 'scale-110' : 'opacity-40'}`}>
+                <span className={`text-[8px] font-black uppercase mb-1 ${d.active ? 'text-[#FF1F40]' : ''}`}>{d.day}</span>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${d.active ? 'bg-[#FF1F40] text-white shadow-lg shadow-red-500/30' : ''}`}>
+                  {d.date}
+                </div>
               </div>
             ))}
           </div>
-        </section>
 
-        {/* 5. Hero Section (Tu próxima clase) */}
-        <section>
-          <div className="flex justify-between items-end mb-4">
-            <h2 className="text-xl font-bold dark:text-white">Tu próxima clase</h2>
-            <a href="#" className="text-sm font-black text-[#FF1F40] tracking-wide hover:underline">VER CALENDARIO</a>
-          </div>
-
-          {nextClass ? (
-            <div className="relative w-full h-56 rounded-3xl overflow-hidden shadow-lg group">
-              <img
-                src={nextClass.imageUrl || "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=800&auto=format&fit=crop"}
-                className="absolute inset-0 w-full h-full object-cover grayscale-[30%]"
-                alt="Next Class"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
-              <div className="absolute inset-x-0 bottom-0 p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-[#FF1F40] text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase shadow-lg shadow-red-900/40">PRÓXIMA</span>
-                  <div className="flex items-center text-white text-[10px] bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg font-bold border border-white/10">
-                    <Clock size={12} className="mr-1.5" />
-                    {nextClass.startTime} - {nextClass.endTime}
+          {/* Large Group Badge */}
+          {currentUserData?.group && (
+            <div className="w-full">
+              <div className="bg-[#FF1F40] text-white p-6 rounded-[2rem] shadow-xl shadow-red-500/20 relative overflow-hidden flex items-center justify-between">
+                <div className="relative z-10">
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1 block">Tu Grupo Asignado</span>
+                  <div className="flex items-center gap-3">
+                    <Users size={24} />
+                    <span className="text-2xl font-black uppercase italic">{currentUserData.group}</span>
                   </div>
                 </div>
-                <h3 className="text-3xl text-white font-black italic uppercase mb-1 drop-shadow-md">{nextClass.name}</h3>
-                <div className="flex items-center text-gray-200 text-xs font-bold gap-1 uppercase">
-                  <MapPin size={14} />
-                  <span>{nextClass.group || 'Entrenamiento'}</span>
-                  <span className="mx-1">•</span>
-                  <span>Coach {nextClass.coachId?.split('-')[1]}</span>
-                </div>
+                <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-black/20 to-transparent"></div>
+                <Users size={80} className="absolute -right-4 -bottom-4 text-black/10 transform -rotate-12" />
               </div>
-            </div>
-          ) : (
-            <div className={`w-full h-56 rounded-3xl flex flex-col items-center justify-center p-8 border-2 border-dashed ${isDarkMode ? 'border-gray-800 bg-[#2A2D3A]/30' : 'border-gray-200 bg-white'}`}>
-              <Activity size={32} className="text-gray-400 mb-4" />
-              <p className="text-sm font-bold text-gray-500 uppercase tracking-widest text-center">No tienes reservas activas</p>
-              <p className="text-[10px] text-gray-400 mt-2">¡Reserva tu próxima sesión abajo!</p>
             </div>
           )}
         </section>
 
-        {/* 6. Acciones Rápidas (Grupo Asignado) */}
-        {!currentUserData?.group ? (
-          <section className="bg-orange-500/10 border border-orange-500/20 p-6 rounded-[2.5rem] text-center">
-            <Users size={32} className="mx-auto text-orange-500 mb-3" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-orange-500">Sin Grupo Asignado</h2>
-            <p className="text-[10px] text-gray-400 font-medium mt-2 leading-relaxed">
-              Contacta con administración para que te asignen a un grupo de entrenamiento.
-            </p>
-          </section>
-        ) : (
-          <section>
-            <h2 className="text-xl font-bold mb-4 dark:text-white">Tus Grupos</h2>
-            <div className="bg-[#FF1F40] p-6 rounded-[2.5rem] shadow-xl shadow-red-900/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform"></div>
-              <div className="relative z-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Entrenamiento Activo</p>
-                <h3 className="text-3xl font-black italic uppercase italic leading-none truncate">
-                  {currentUserData?.groups ? currentUserData.groups.join(' & ') : currentUserData?.group}
-                </h3>
-                <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center gap-4 text-white/80">
-                    <div className="flex items-center gap-1 text-[10px] font-bold">
-                      <Check size={12} />
-                      ACCESO COMPLETO
-                    </div>
-                  </div>
-                  {currentUserData?.photoURL && (
-                    <div className="w-10 h-10 rounded-full border-2 border-white/20 overflow-hidden shadow-lg">
-                      <img src={currentUserData.photoURL} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <section className="space-y-4 pb-10">
-          <div className="flex justify-between items-end mb-4">
-            <h2 className="text-xl font-bold dark:text-white">Agenda</h2>
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{classList.length} Disponibles</span>
+        {/* 2. Mis Reservas */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Check size={20} className="text-[#FF1F40]" />
+            <h2 className="text-xl font-black italic uppercase dark:text-white">Mis Reservas</h2>
           </div>
 
-          {classList.length === 0 ? (
-            <div className="py-10 text-center opacity-40">
-              <Calendar size={40} className="mx-auto mb-3" />
-              <p className="text-sm font-bold uppercase tracking-widest">No hay clases hoy</p>
+          {userReservations.length === 0 ? (
+            <div className="py-12 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-[2rem] flex flex-col items-center justify-center text-center opacity-50">
+              <Calendar size={48} className="mb-4 text-gray-400" />
+              <p className="text-sm font-bold uppercase tracking-widest">No tienes clases reservadas</p>
+              <p className="text-[10px] text-gray-400 mt-2 max-w-[200px]">Ve a la pestaña Agenda para reservar tus sesiones de la semana.</p>
             </div>
           ) : (
-            classList.map((item) => {
-              const reservationStatus = userReservations[item.id]; // 'confirmed', 'waitlist', 'pending_confirmation', or undefined
-              const isReserved = !!reservationStatus;
-              const isFull = item.currentCapacity >= item.maxCapacity;
+            <div className="space-y-3">
+              {userReservations.map((res: any) => (
+                <div key={res.id} className="bg-white dark:bg-[#2A2D3A] p-5 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 relative overflow-hidden group">
+                  {/* Status Color Bar */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 
+                                ${res.data.status === 'confirmed' ? 'bg-[#FF1F40]' :
+                      res.data.status === 'waitlist' ? 'bg-orange-500' : 'bg-green-500'}`}
+                  />
 
-              return (
-                <div
-                  key={item.id}
-                  className={`relative rounded-[2.5rem] overflow-hidden group transition-all active:scale-[0.98] ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-xl shadow-gray-300/30 border border-gray-100'}`}
-                >
-                  {/* Background Image with Overlay */}
-                  <div className="absolute inset-0 z-0">
-                    <img
-                      src={item.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
-                      alt={item.name}
-                      className="w-full h-full object-cover opacity-60"
-                    />
-                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-gradient-to-r from-[#2A2D3A] via-[#2A2D3A]/90 to-transparent' : 'bg-gradient-to-r from-white via-white/90 to-transparent'}`} />
+                  {/* Date Box */}
+                  <div className="flex flex-col items-center justify-center bg-gray-50 dark:bg-white/5 w-16 h-16 rounded-2xl shrink-0">
+                    <span className="text-lg font-black dark:text-white">{new Date(res.classData.date).getDate()}</span>
+                    <span className="text-[8px] font-bold uppercase text-gray-400">
+                      {new Date(res.classData.date).toLocaleDateString('es-ES', { month: 'short' })}
+                    </span>
                   </div>
 
-                  <div
-                    className="p-6 space-y-4 relative z-10 cursor-pointer"
-                    onClick={() => setSelectedClassForWod(item)}
+                  {/* Details */}
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="font-black border-b border-transparent group-hover:border-[#FF1F40] transition-all uppercase italic text-sm leading-tight dark:text-white">
+                        {res.classData.name}
+                      </h3>
+                      {res.data.status === 'waitlist' && <span className="text-[8px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md font-bold uppercase">En Cola</span>}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
+                      <span className="flex items-center gap-1"><Clock size={12} /> {res.classData.startTime}</span>
+                      <span className="flex items-center gap-1"><MapPin size={12} /> {res.classData.group || 'Box'}</span>
+                    </div>
+                  </div>
+
+                  {/* Action */}
+                  <button
+                    onClick={() => handleCancelReservation(res.id, res.classData.id)}
+                    className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-[#FF1F40] flex flex-col items-center justify-center text-white shadow-lg shadow-red-600/20">
-                          <span className="text-xs font-black leading-none">{item.startTime}</span>
-                          <span className="text-[8px] font-black uppercase opacity-60">AM</span>
-                        </div>
-                        <div>
-                          <h3 className="text-base font-black italic uppercase leading-tight">{item.name}</h3>
-                          <div className="flex items-center gap-2 mt-0.5 text-gray-500">
-                            <MapPin size={12} />
-                            <span className="text-[10px] font-bold uppercase">{item.group === 'box' ? 'BOX' : 'FIT'} • Sala Principal</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Capacity Badge */}
-                      <div className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${isFull
-                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                        : 'bg-green-500/10 text-green-500 border-green-500/20'
-                        }`}>
-                        {isFull ? 'COMPLETO' : `${item.currentCapacity}/${item.maxCapacity}`}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100/10 dark:border-white/5">
-                      <div className="flex items-center gap-4">
-                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                          Coach {item.coachId?.split('-')[1] || 'Staff'}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (isReserved && reservationStatus !== 'pending_confirmation') {
-                            handleCancel(item.id);
-                          } else if (reservationStatus === 'pending_confirmation') {
-                            if (pendingPromotion) {
-                              handleAcceptPromotion(pendingPromotion.id, item.id);
-                            }
-                          } else {
-                            handleReserve(item.id, item.currentCapacity, item.maxCapacity);
-                          }
-                        }}
-                        className={`
-                                  px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg
-                                  ${reservationStatus === 'confirmed'
-                            ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-900/20' // Botón Cancelar (Rojo)
-                            : reservationStatus === 'waitlist'
-                              ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-orange-900/20' // Botón Lista Espera (Naranja)
-                              : reservationStatus === 'pending_confirmation'
-                                ? 'bg-green-500 animate-pulse text-white' // Botón Confirmar (Verde Parpadeante)
-                                : isFull
-                                  ? 'bg-yellow-500 text-white shadow-yellow-900/20' // Botón Unirse Cola (Amarillo)
-                                  : 'bg-green-500 text-white shadow-green-900/20 hover:scale-105 active:scale-95 hover:brightness-110'} // Botón Reservar (Verde)
-                                `}
-                      >
-                        {reservationStatus === 'confirmed' ? (
-                          <div className="flex items-center gap-2">
-                            <LogOut size={14} strokeWidth={3} />
-                            CANCELAR
-                          </div>
-                        ) : reservationStatus === 'waitlist' ? (
-                          <div className="flex items-center gap-2">
-                            <Clock size={14} strokeWidth={3} />
-                            EN COLA (SALIR)
-                          </div>
-                        ) : reservationStatus === 'pending_confirmation' ? (
-                          <div className="flex items-center gap-2">
-                            <Check size={14} strokeWidth={3} />
-                            CONFIRMAR PLAZA
-                          </div>
-                        ) : isFull ? (
-                          <div className="flex items-center gap-2">
-                            <Activity size={14} strokeWidth={3} />
-                            UNIRSE A COLA
-                          </div>
-                        ) : 'RESERVAR PLAZA'}
-                      </button>
-                    </div>
-                  </div>
+                    <X size={16} />
+                  </button>
                 </div>
-              );
-            })
+              ))}
+            </div>
           )}
         </section>
+
+        {/* --- DEV BUTTON --- */}
+        <div className="flex gap-4 mb-24 opacity-50 hover:opacity-100 transition-opacity">
+          <button
+            onClick={generateExamples}
+            className="flex-1 py-4 text-xs font-bold uppercase text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+          >
+            🛠️ Generar Test
+          </button>
+          <button
+            onClick={resetAccount}
+            className="flex-1 py-4 text-xs font-bold uppercase text-red-400 border-2 border-dashed border-red-200 dark:border-red-900/30 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+          >
+            ⚠️ Resetear Cuenta
+          </button>
+        </div>
 
       </div>
-
-
-
-      <BottomNavigation
-        role="user"
-        activeTab="home"
-      />
-
-      {/* WOD DETAIL MODAL */}
-      {selectedClassForWod && (
-        <div className="fixed inset-0 z-[300] flex items-end justify-center sm:items-center p-0 sm:p-6 translate-y-0 transition-transform">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setSelectedClassForWod(null)}></div>
-          <div className={`relative w-full max-w-md ${isDarkMode ? 'bg-[#1F2128]' : 'bg-[#F3F4F6]'} rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300`}>
-
-            {/* Modal Header Image */}
-            <div className="relative h-48">
-              <img
-                src={selectedClassForWod.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
-                className="w-full h-full object-cover"
-                alt=""
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1F2128] via-[#1F2128]/40 to-transparent"></div>
-              <button
-                onClick={() => setSelectedClassForWod(null)}
-                className="absolute top-6 right-6 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 active:scale-95"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="px-8 pb-10 -mt-8 relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="bg-[#FF1F40] text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">WOD DEL DÍA</span>
-                <span className="bg-white/10 backdrop-blur-md text-white text-[8px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest">
-                  {selectedClassForWod.startTime} - {selectedClassForWod.endTime}
-                </span>
-              </div>
-              <h3 className="text-3xl font-black italic uppercase italic text-white mb-2 leading-none">{selectedClassForWod.name}</h3>
-              <p className="text-xs text-gray-400 font-medium mb-8">Coach {selectedClassForWod.coachId?.split('-')[1] || 'Staff'} • {selectedClassForWod.group}</p>
-
-              {/* WOD Content */}
-              <div className="space-y-3 mb-8">
-                {selectedClassForWod.wod && selectedClassForWod.wod.length > 0 ? (
-                  selectedClassForWod.wod.map((exercise: any, i: number) => (
-                    <div key={i} className={`p-5 rounded-[1.5rem] flex items-center justify-between ${isDarkMode ? 'bg-[#2A2D3A]' : 'bg-white shadow-sm border border-gray-100'}`}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-[#FF1F40]/10 rounded-xl flex items-center justify-center text-[#FF1F40]">
-                          <Dumbbell size={20} />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-black uppercase italic leading-tight">{exercise.exerciseName}</h4>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase">{exercise.sets} Sets • {exercise.reps} Reps</p>
-                        </div>
-                      </div>
-                      <ChevronRight size={16} className="text-gray-600" />
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-10 text-center opacity-30 border-2 border-dashed border-gray-700 rounded-[2rem]">
-                    <Activity size={32} className="mx-auto mb-3" />
-                    <p className="text-xs font-black uppercase tracking-widest text-white">Próximamente publicaremos el WOD</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => handleExportPDF(selectedClassForWod)}
-                  className="bg-white text-black py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all"
-                >
-                  <FileDown size={16} />
-                  Exportar PDF
-                </button>
-                <button
-                  onClick={() => {
-                    const status = userReservations[selectedClassForWod.id];
-                    if (status) handleCancel(selectedClassForWod.id);
-                    else handleReserve(selectedClassForWod.id, selectedClassForWod.currentCapacity, selectedClassForWod.maxCapacity);
-                    setSelectedClassForWod(null);
-                  }}
-                  className={`${userReservations[selectedClassForWod.id] ? 'bg-red-500' : 'bg-[#FF1F40]'} text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all shadow-red-900/40`}
-                >
-                  {userReservations[selectedClassForWod.id] ? <X size={16} strokeWidth={3} /> : <Check size={16} strokeWidth={3} />}
-                  {userReservations[selectedClassForWod.id] ? 'CANCELAR' : 'RESERVAR'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <BottomNavigation role="user" activeTab="home" />
     </div>
   );
 };

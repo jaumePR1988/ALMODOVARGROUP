@@ -74,8 +74,8 @@ const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
                 {/* Header Unificado */}
                 <TopHeader
-                    title="Admin Dashboard"
-                    subtitle="Almodovar Group"
+                    title={`Hola, Admin 👋`}
+                    subtitle="Panel de Gestión"
                     showNotificationDot={stats.pendingUsers > 0}
                     onLogout={onLogout}
                 />

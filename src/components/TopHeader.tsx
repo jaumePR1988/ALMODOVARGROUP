@@ -9,6 +9,7 @@ interface TopHeaderProps {
     subtitle?: string;
     showNotificationDot?: boolean;
     avatarText?: string;
+    profileImage?: string;
     onBack?: () => void;
     onLogout?: () => void;
 }
@@ -18,6 +19,7 @@ const TopHeader: React.FC<TopHeaderProps> = ({
     subtitle,
     showNotificationDot = true,
     avatarText = "AG",
+    profileImage,
     onBack,
     onLogout
 }) => {
@@ -73,9 +75,13 @@ const TopHeader: React.FC<TopHeaderProps> = ({
                         <ArrowLeft size={20} />
                     </button>
                 ) : (
-                    <div className="w-12 h-12 rounded-full bg-[#FF1F40] flex items-center justify-center font-black text-lg text-white shadow-lg shadow-red-600/20 italic">
-                        {avatarText}
-                    </div>
+                    <button onClick={() => navigate('/profile')} className="w-12 h-12 rounded-full bg-[#FF1F40] flex items-center justify-center font-black text-lg text-white shadow-lg shadow-red-600/20 italic active:scale-95 transition-transform overflow-hidden p-0 border-2 border-[#FF1F40]">
+                        {profileImage ? (
+                            <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            avatarText
+                        )}
+                    </button>
                 )}
                 {title && (
                     <div>

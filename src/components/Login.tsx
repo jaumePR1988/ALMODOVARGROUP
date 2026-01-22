@@ -72,6 +72,8 @@ const Login = ({ onLogin }: LoginProps) => {
                     status: isBootstrapAdmin ? 'active' : 'pending',
                     isApproved: isBootstrapAdmin,
                     plan: null,
+                    credits: 2,
+                    planCredits: 2,
                     group: null,
                     createdAt: serverTimestamp()
                 });

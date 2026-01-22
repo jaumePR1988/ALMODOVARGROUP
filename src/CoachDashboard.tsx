@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 // @ts-ignore
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import BottomNavigation from './components/BottomNavigation';
 import TopHeader from './components/TopHeader';
 import { collection, onSnapshot, query, where, orderBy, limit, getDocs, getDoc, doc } from 'firebase/firestore';
@@ -202,8 +202,10 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
             item.notes
         ]);
 
-        (doc as any).autoTable({
-            startY: 70, head: [['EJERCICIO', 'SETS', 'REPES', 'NOTAS']], body: tableData,
+        autoTable(doc, {
+            startY: 70,
+            head: [['EJERCICIO', 'SETS', 'REPES', 'NOTAS']],
+            body: tableData,
             theme: 'grid',
             headStyles: { fillColor: [255, 31, 64], textColor: [255, 255, 255] },
             styles: { fontSize: 9 }
@@ -222,8 +224,9 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
                 {/* Header Unificado */}
                 <TopHeader
-                    title="Coach Panel"
-                    subtitle={`Hola, ${user?.displayName || 'Coach'} 👋`}
+                    title={`Hola, ${user?.displayName ? user.displayName.split(' ')[0] : 'Coach'} 👋`}
+                    subtitle="Panel de Entrenador"
+                    profileImage={user?.photoURL}
                     showNotificationDot={false}
                     onLogout={onLogout}
                 />
@@ -413,11 +416,18 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                     PDF WOD
                                 </button>
                                 <button
-                                    onClick={() => navigate(`/manage-attendance/${selectedClassForWod.id}`)}
+                                    onClick={() => navigate(`/edit-class/${selectedClassForWod.id}`)}
                                     className="bg-[#FF1F40] text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all shadow-red-900/40"
                                 >
+                                    <Dumbbell size={16} strokeWidth={3} />
+                                    EDITAR WOD
+                                </button>
+                                <button
+                                    onClick={() => navigate(`/manage-attendance/${selectedClassForWod.id}`)}
+                                    className="col-span-2 bg-gray-900 text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all"
+                                >
                                     <Check size={16} strokeWidth={3} />
-                                    ASISTENCIA
+                                    CONTROL DE ASISTENCIA
                                 </button>
                             </div>
                         </div>

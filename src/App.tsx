@@ -6,7 +6,7 @@ import CoachDashboard from './CoachDashboard';
 import SplashScreen from './components/SplashScreen';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
 
 import Login from './components/Login';
 import Notifications from './components/Notifications';
@@ -21,10 +21,17 @@ import AttendanceList from './components/AttendanceList';
 import Agenda from './components/Agenda';
 import ExerciseLibrary from './components/ExerciseLibrary';
 
+import ProfilePage from './pages/ProfilePage';
+import LegalPage from './pages/LegalPage';
+import AdminReports from './components/AdminReports';
+import NewsModule from './components/NewsModule';
+import SendNotification from './components/SendNotification';
+
 import ErrorBoundary from './components/ErrorBoundary';
 
 const AppContent = () => {
   const navigate = useNavigate();
+
   const [isSplashScreen, setIsSplashScreen] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -137,8 +144,12 @@ const AppContent = () => {
       <Route path="/manage-users" element={<AdminUsersList onLogout={handleLogout} />} />
       <Route path="/manage-groups" element={<AdminGroupsList onLogout={handleLogout} />} />
       <Route path="/agenda" element={<Agenda onLogout={handleLogout} />} />
-      <Route path="/reports" element={<div className="p-20 text-center font-black italic uppercase italic">Sección de Reports (Próximamente)</div>} />
+      <Route path="/reports" element={<AdminReports />} />
       <Route path="/exercise-library" element={<ExerciseLibrary />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/legal" element={<LegalPage />} />
+      <Route path="/news" element={<NewsModule />} />
+      <Route path="/send-notification" element={<SendNotification />} />
       {/* Dev Switch */}
       <Route path="/switch" element={<DevSwitch onLogout={handleLogout} />} />
     </Routes>
@@ -161,9 +172,15 @@ const DevSwitch = ({ onLogout }: { onLogout: () => void }) => {
 };
 
 const App = () => {
-  // Ensure theme is dark
+  // Initialize theme based on localStorage or default to dark
   useEffect(() => {
-    document.documentElement.classList.add('dark');
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    }
   }, []);
 
   return (
