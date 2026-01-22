@@ -41,6 +41,25 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [reservations, setReservations] = useState<{ [key: string]: string }>({});
 
+    // Fetch User Profile locally since this component is a page
+    useEffect(() => {
+        const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userRef = doc(db, 'users', user.uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    setUserProfile(userSnap.data());
+                } else {
+                    // Fallback if doc doesn't exist (rare)
+                    setUserProfile({});
+                }
+            } else {
+                setUserProfile(null);
+            }
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
     // MODAL STATE
     const [modalConfig, setModalConfig] = useState<any>({ isOpen: false, type: 'info', title: '', message: '' });
     const [selectedClassForWod, setSelectedClassForWod] = useState<any>(null);
