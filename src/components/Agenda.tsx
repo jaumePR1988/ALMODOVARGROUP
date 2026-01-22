@@ -102,18 +102,31 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
     useEffect(() => {
         if (availableGroups.length > 0) {
             if (userProfile && !selectedGroup) {
-                // If user has a specific group, try to set it
-                const userGroup = userProfile.group || (userProfile.groups && userProfile.groups[0]);
-                if (userGroup) {
-                    // Normalize
-                    const match = availableGroups.find(g => g.name.toLowerCase() === userGroup.toLowerCase());
-                    if (match) setSelectedGroup(match.name);
-                    else setSelectedGroup(availableGroups[0].name);
+                // Prioritize 'groups' array, then fallback to 'group'
+                let userGroups = userProfile.groups || [];
+                if (userProfile.group && !userGroups.includes(userProfile.group)) {
+                    userGroups = [userProfile.group, ...userGroups];
+                }
+
+                if (userGroups.length > 0) {
+                    // Try to find a match for ANY of the user's groups in availableGroups
+                    // ensuring we use the capitalized name from availableGroups
+                    const match = availableGroups.find(g =>
+                        userGroups.some((ug: string) => ug.toLowerCase() === g.name.toLowerCase())
+                    );
+
+                    if (match) {
+                        setSelectedGroup(match.name);
+                    } else {
+                        // Fallback only if NO match found
+                        setSelectedGroup(availableGroups[0].name);
+                    }
                 } else {
+                    // No groups assigned to user
                     setSelectedGroup(availableGroups[0].name);
                 }
             } else if (!selectedGroup) {
-                // Fallback if no profile yet
+                // No user profile logged in yet?
                 setSelectedGroup(availableGroups[0].name);
             }
         }
