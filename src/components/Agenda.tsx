@@ -100,34 +100,48 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
 
     // 2. Auto-Select Group based on Profile or Default
     useEffect(() => {
+        // Wait for availableGroups to be loaded
         if (availableGroups.length > 0) {
-            if (userProfile && !selectedGroup) {
-                // Prioritize 'groups' array, then fallback to 'group'
-                let userGroups = userProfile.groups || [];
-                if (userProfile.group && !userGroups.includes(userProfile.group)) {
-                    userGroups = [userProfile.group, ...userGroups];
-                }
 
-                if (userGroups.length > 0) {
-                    // Try to find a match for ANY of the user's groups in availableGroups
-                    // ensuring we use the capitalized name from availableGroups
-                    const match = availableGroups.find(g =>
-                        userGroups.some((ug: string) => ug.toLowerCase() === g.name.toLowerCase())
-                    );
+            // If already selected, do nothing (unless we want to force re-select on profile change?)
+            // But we specifically need to handle the initial load or "no selection yet"
+            if (!selectedGroup) {
 
-                    if (match) {
-                        setSelectedGroup(match.name);
+                // CRITICAL: Check if we are still waiting for user profile potentially?
+                // Depending on App structure, userProfile might be null initially.
+                // However, we can try to best-effort match if userProfile exists.
+
+                if (userProfile) {
+                    // Prioritize 'groups' array, then fallback to 'group'
+                    let userGroups = userProfile.groups || [];
+                    if (userProfile.group && !userGroups.includes(userProfile.group)) {
+                        userGroups = [userProfile.group, ...userGroups];
+                    }
+
+                    if (userGroups.length > 0) {
+                        // Try to find a match for ANY of the user's groups in availableGroups
+                        // ensuring we use the capitalized name from availableGroups
+                        const match = availableGroups.find(g =>
+                            userGroups.some((ug: string) => ug.toLowerCase() === g.name.toLowerCase())
+                        );
+
+                        if (match) {
+                            setSelectedGroup(match.name);
+                        } else {
+                            // Fallback only if NO match found
+                            setSelectedGroup(availableGroups[0].name);
+                        }
                     } else {
-                        // Fallback only if NO match found
+                        // User loaded but has no groups? Fallback default
                         setSelectedGroup(availableGroups[0].name);
                     }
                 } else {
-                    // No groups assigned to user
+                    // Accessing agenda without profile loaded OR guest? 
+                    // To prevent flashing wrong group, maybe we don't default yet?
+                    // But if it's admin/coach they might rely on default.
+                    // Let's safe fallback only if we are sure keys are stable.
                     setSelectedGroup(availableGroups[0].name);
                 }
-            } else if (!selectedGroup) {
-                // No user profile logged in yet?
-                setSelectedGroup(availableGroups[0].name);
             }
         }
     }, [userProfile, availableGroups, selectedGroup]);
