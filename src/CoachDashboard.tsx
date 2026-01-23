@@ -133,9 +133,15 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
         return () => unsubscribe();
     }, [coachProfileId]);
 
-    const urlToBase64 = async (url: string): Promise<string> => {
+    const urlToBase64 = async (url: string, useProxy = false): Promise<string> => {
         try {
-            const response = await fetch(url, { mode: 'cors' });
+            const fetchUrl = useProxy
+                ? `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+                : url;
+
+            const response = await fetch(fetchUrl, { mode: 'cors' });
+            if (!response.ok) throw new Error('Network response was not ok');
+
             const blob = await response.blob();
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -144,19 +150,28 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 reader.readAsDataURL(blob);
             });
         } catch (error) {
-            console.warn("Image fetch failed, falling back to canvas method:", error);
-            // Fallback to Canvas method if fetch fails (e.g. strict CORS but allowing loading in img tag)
+            if (!useProxy) {
+                console.warn("Direct image fetch failed, retrying with proxy:", error);
+                return urlToBase64(url, true);
+            }
+
+            console.warn("Proxy image fetch failed too, trying canvas fallback:", error);
+            // Fallback to Canvas method (last resort, works if image is cached or strictly CORS compliant for tags but not fetch)
             return new Promise((resolve, reject) => {
                 const img = new Image();
                 img.crossOrigin = 'Anonymous';
-                img.src = url;
+                img.src = url; // Standard URL for canvas
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/jpeg'));
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx?.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg'));
+                    } catch (e) {
+                        reject(e); // Tainted canvas error
+                    }
                 };
                 img.onerror = () => reject(new Error('Canvas image load failed'));
             });
