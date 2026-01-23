@@ -4,24 +4,19 @@ import {
   Bell,
   MapPin,
   Clock,
-  Activity,
   Calendar,
   Check,
   Users,
-  LogOut,
-  Dumbbell,
-  FileDown,
-  ChevronRight,
   X
 } from 'lucide-react';
 // @ts-ignore
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
 import BottomNavigation from './components/BottomNavigation';
 import PremiumModal from './components/PremiumModal';
 import TopHeader from './components/TopHeader';
+import WodModal from './components/WodModal';
 import { db, auth } from './firebase';
-import { collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, getDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs } from 'firebase/firestore';
 
 
 const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
@@ -38,6 +33,9 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
   // MODAL STATE
   const [modalConfig, setModalConfig] = useState<any>({ isOpen: false, type: 'info', title: '', message: '' });
+  const [selectedWod, setSelectedWod] = useState<any>(null);
+  const [isWodModalOpen, setIsWodModalOpen] = useState(false);
+
 
   useEffect(() => {
     const un = auth.onAuthStateChanged((user) => {
@@ -380,6 +378,11 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
         onConfirm={modalConfig.onConfirm}
         onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
       />
+      <WodModal
+        isOpen={isWodModalOpen}
+        onClose={() => setIsWodModalOpen(false)}
+        classData={selectedWod}
+      />
       <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
 
         {/* Global Notification */}
@@ -468,63 +471,81 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
           ) : (
             <div className="space-y-3">
               {userReservations.map((res: any) => (
-                <div key={res.id} className="bg-white dark:bg-[#2A2D3A] p-5 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 flex items-center gap-4 relative overflow-hidden group">
-                  {/* Status Color Bar */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 
+                <div key={res.id}
+                  onClick={() => { setSelectedWod(res.classData); setIsWodModalOpen(true); }}
+                  className="bg-white dark:bg-[#2A2D3A] rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all"
+                >
+                  {/* Status Color Bar (Left Edge) */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-2 z-10 
                                 ${res.data.status === 'confirmed' ? 'bg-[#FF1F40]' :
                       res.data.status === 'waitlist' ? 'bg-orange-500' : 'bg-green-500'}`}
                   />
 
-                  {/* Date Box */}
-                  <div className="flex flex-col items-center justify-center bg-gray-50 dark:bg-white/5 w-16 h-16 rounded-2xl shrink-0">
-                    <span className="text-lg font-black dark:text-white">{new Date(res.classData.date).getDate()}</span>
-                    <span className="text-[8px] font-bold uppercase text-gray-400">
-                      {new Date(res.classData.date).toLocaleDateString('es-ES', { month: 'short' })}
-                    </span>
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-black border-b border-transparent group-hover:border-[#FF1F40] transition-all uppercase italic text-sm leading-tight dark:text-white">
-                        {res.classData.name}
-                      </h3>
-                      {res.data.status === 'waitlist' && <span className="text-[8px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md font-bold uppercase">En Cola</span>}
+                  <div className="flex">
+                    {/* Hero Image (Left 35%) */}
+                    <div className="w-[35%] min-h-[140px] relative">
+                      <img
+                        src={res.classData.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white backdrop-blur-[1px]">
+                        <span className="text-3xl font-black leading-none shadow-black drop-shadow-md">{new Date(res.classData.date).getDate()}</span>
+                        <span className="text-[10px] font-bold uppercase opacity-90 shadow-black drop-shadow-md">
+                          {new Date(res.classData.date).toLocaleDateString('es-ES', { month: 'short' })}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
-                      <span className="flex items-center gap-1"><Clock size={12} /> {res.classData.startTime}</span>
-                      <span className="flex items-center gap-1"><MapPin size={12} /> {res.classData.group || 'Box'}</span>
+
+                    {/* Details (Right 65%) */}
+                    <div className="flex-1 p-4 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-black uppercase italic text-lg leading-tight dark:text-white line-clamp-2">
+                            {res.classData.name}
+                          </h3>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3 text-sm text-gray-500 font-medium">
+                            <span className="flex items-center gap-1"><Clock size={14} /> {res.classData.startTime}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* Capacity Indicator */}
+                            <div className="flex-1 h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[#FF1F40] rounded-full"
+                                style={{ width: `${Math.min(100, (res.classData.currentCapacity / res.classData.maxCapacity) * 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-400">
+                              {res.classData.currentCapacity}/{res.classData.maxCapacity}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelReservation(res.id, res.classData.id);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-[#FF1F40] text-xs font-black uppercase text-center border border-red-100 dark:border-red-900/50 hover:bg-[#FF1F40] hover:text-white transition-all shadow-sm"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Action */}
-                  <button
-                    onClick={() => handleCancelReservation(res.id, res.classData.id)}
-                    className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-400 hover:bg-red-100 hover:text-red-500 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
                 </div>
               ))}
             </div>
           )}
         </section>
 
-        {/* --- DEV BUTTON --- */}
-        <div className="flex gap-4 mb-24 opacity-50 hover:opacity-100 transition-opacity">
-          <button
-            onClick={generateExamples}
-            className="flex-1 py-4 text-xs font-bold uppercase text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-          >
-            🛠️ Generar Test
-          </button>
-          <button
-            onClick={resetAccount}
-            className="flex-1 py-4 text-xs font-bold uppercase text-red-400 border-2 border-dashed border-red-200 dark:border-red-900/30 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
-          >
-            ⚠️ Resetear Cuenta
-          </button>
-        </div>
+
 
       </div>
       <BottomNavigation role="user" activeTab="home" />

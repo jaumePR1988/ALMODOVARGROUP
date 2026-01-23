@@ -815,23 +815,7 @@ const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
                     </div>
                 </div>
             )}
-                                    <>
-                                        <Trash2 size={18} />
-                                        Eliminar Definitivamente
-                                    </>
-                                )}
-                            </button>
-                            <button
-                                onClick={() => setGroupToDelete(null)}
-                                disabled={isSubmitting}
-                                className={`w-full ${isDarkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all`}
-                            >
-                                Cancelar
-                            </button>
-                        </div >
-                    </div >
-                </div >
-            )}
+
         </div >
     );
 };
