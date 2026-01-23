@@ -133,21 +133,34 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
         return () => unsubscribe();
     }, [coachProfileId]);
 
-    const urlToBase64 = (url: string): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.src = url;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0);
-                resolve(canvas.toDataURL('image/jpeg'));
-            };
-            img.onerror = reject;
-        });
+    const urlToBase64 = async (url: string): Promise<string> => {
+        try {
+            const response = await fetch(url, { mode: 'cors' });
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.warn("Image fetch failed, falling back to canvas method:", error);
+            // Fallback to Canvas method if fetch fails (e.g. strict CORS but allowing loading in img tag)
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.src = url;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = () => reject(new Error('Canvas image load failed'));
+            });
+        }
     };
 
     const handleExportPDF = async (classData: any) => {
@@ -159,13 +172,25 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
         doc.setFillColor(12, 12, 12);
         doc.rect(0, 0, pageWidth, 40, 'F');
 
-        // Logo Placeholder
-        doc.setFillColor(255, 31, 64);
-        doc.circle(25, 20, 12, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(30);
-        doc.setFont("helvetica", "bold");
-        doc.text("A", 25, 29, { align: "center", baseline: "bottom" });
+        // Logo
+        try {
+            // Load local logo from public folder
+            const logoImg = new Image();
+            logoImg.src = '/logo_almodovar.png';
+            await new Promise((resolve) => {
+                logoImg.onload = resolve;
+                logoImg.onerror = resolve; // Continue even if fails
+            });
+            doc.addImage(logoImg, 'PNG', 15, 8, 24, 24);
+        } catch (e) {
+            // Fallback Circle 'A'
+            doc.setFillColor(255, 31, 64);
+            doc.circle(25, 20, 12, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(30);
+            doc.setFont("helvetica", "bold");
+            doc.text("A", 25, 29, { align: "center", baseline: "bottom" });
+        }
 
         // Brand Name
         doc.setFontSize(22);

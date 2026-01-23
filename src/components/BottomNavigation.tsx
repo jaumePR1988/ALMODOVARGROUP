@@ -34,11 +34,8 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ role, activeTab }) 
             { icon: <MessageSquare size={20} />, label: 'Enviar', path: '/send-notification' },
         ],
         coach: [
-            { icon: <Calendar size={22} />, label: 'Agenda', path: '/agenda' },
-            { icon: <Zap size={22} />, label: 'WOD', path: '#' },
-            { icon: <Activity size={22} />, label: '+Ejercicio', path: '#' },
-            { icon: <MessageSquare size={22} />, label: 'Enviar', path: '/send-notification' },
-            { icon: <User size={22} />, label: 'Perfil', path: '#' },
+            { icon: <Zap size={22} />, label: 'Ejercicios', path: '/exercise-library' },
+            { icon: <MessageSquare size={22} />, label: 'Mensaje', path: '/send-notification' },
         ],
         user: [
             { icon: <Zap size={22} />, label: 'WOD', path: '#' },

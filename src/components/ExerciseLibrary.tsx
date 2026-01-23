@@ -218,7 +218,7 @@ const ExerciseLibrary = () => {
                 <TopHeader
                     title="Biblioteca"
                     subtitle="Ejercicios y Movimientos"
-                    onBack={() => navigate('/admin')}
+                    onBack={() => navigate(-1)}
                 />
 
                 <div className="flex gap-3">
