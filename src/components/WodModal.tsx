@@ -18,6 +18,7 @@ const WodModal: React.FC<WodModalProps> = ({ isOpen, onClose, classData }) => {
     // Coach Name & Attendees State
     const [coachName, setCoachName] = useState('Coach');
     const [attendees, setAttendees] = useState<any[]>([]);
+    const [exerciseImages, setExerciseImages] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
         if (!classData) return;
@@ -52,6 +53,28 @@ const WodModal: React.FC<WodModalProps> = ({ isOpen, onClose, classData }) => {
             setAttendees(users);
         };
         fetchAttendees();
+
+        // 3. Fetch Exercise Images
+        const fetchImages = async () => {
+            if (!classData.wod || !Array.isArray(classData.wod)) return;
+            const images: { [key: string]: string } = {};
+
+            for (const item of classData.wod) {
+                if (item.exerciseId) {
+                    try {
+                        // Check if we already have it (though locally not persistent)
+                        const exDoc = await getDoc(doc(db, 'exercises', item.exerciseId));
+                        if (exDoc.exists() && exDoc.data().imageUrl) {
+                            images[item.exerciseId] = exDoc.data().imageUrl;
+                        }
+                    } catch (e) {
+                        console.error("Error fetching exercise image:", e);
+                    }
+                }
+            }
+            setExerciseImages(images);
+        };
+        fetchImages();
 
     }, [classData?.id, classData?.coachId]);
 
@@ -182,8 +205,18 @@ const WodModal: React.FC<WodModalProps> = ({ isOpen, onClose, classData }) => {
                             <div className="space-y-3">
                                 {wodItems.map((item: any, idx: number) => (
                                     <div key={idx} className={`p-4 rounded-2xl border flex gap-4 ${isDarkMode ? 'bg-[#2A2D3A] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
-                                        <div className="w-10 h-10 rounded-xl bg-[#FF1F40]/10 flex items-center justify-center text-[#FF1F40] shrink-0 font-black text-sm">
-                                            {idx + 1}
+                                        <div className="w-16 h-16 rounded-xl bg-gray-200 shrink-0 overflow-hidden relative">
+                                            {item.exerciseId && exerciseImages[item.exerciseId] ? (
+                                                <img
+                                                    src={exerciseImages[item.exerciseId]}
+                                                    alt={item.exerciseName}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-[#FF1F40]/10 text-[#FF1F40] font-black text-sm">
+                                                    {idx + 1}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex-1">
                                             <h4 className={`text-sm font-black uppercase italic ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
