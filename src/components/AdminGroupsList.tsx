@@ -778,26 +778,43 @@ const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
             {/* Delete Group Confirmation Modal */}
             {groupToDelete && (
                 <div className="fixed inset-0 z-[2000] flex items-center justify-center px-6">
-                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-[#1F2128]/95' : 'bg-[#1F2128]/40'} backdrop-blur-2xl`}></div>
-                    <div className={`relative w-full max-w-sm ${isDarkMode ? 'bg-[#262932] border-white/10' : 'bg-white border-gray-200'} rounded-[3rem] border border-white/10 shadow-3xl p-8 text-center animate-in zoom-in-95`}>
-                        <div className="w-20 h-20 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/10">
+                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-[#1F2128]/95' : 'bg-[#1F2128]/60'} backdrop-blur-md transition-opacity`} onClick={() => setGroupToDelete(null)}></div>
+                    <div className={`relative w-full max-w-sm ${isDarkMode ? 'bg-[#262932] border-red-500/20' : 'bg-white border-red-100'} rounded-[3rem] border-2 shadow-[0_0_50px_rgba(239,68,68,0.2)] p-8 text-center animate-in zoom-in-95 duration-300`}>
+                        <div className="w-24 h-24 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-red-500/10 animate-pulse">
                             <Trash2 size={40} strokeWidth={2.5} />
                         </div>
 
-                        <h3 className={`text-xl font-black italic uppercase italic mb-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Eliminar Grupo?</h3>
+                        <h3 className={`text-2xl font-black italic uppercase italic mb-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Eliminar Grupo?</h3>
                         <p className="text-xs text-gray-400 font-medium leading-relaxed mb-8">
-                            Estás a punto de eliminar el grupo <span className={`${isDarkMode ? 'text-white' : 'text-gray-900'} font-black italic uppercase`}>{groupToDelete.name}</span>.
-                            <br /><br />
-                            Esta acción es irreversible y podría afectar a los usuarios asignados.
+                            Se eliminará permanentemente:
+                            <br />
+                            <span className="text-[#FF1F40] font-black italic uppercase text-lg block mt-2 mb-2">{groupToDelete.name}</span>
+                            Esta acción no se puede deshacer.
                         </p>
 
                         <div className="space-y-3">
                             <button
                                 onClick={handleDeleteGroup}
                                 disabled={isSubmitting}
-                                className="w-full bg-red-500 py-4 rounded-2xl font-black uppercase italic tracking-widest text-sm shadow-xl shadow-red-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-white"
+                                className="w-full bg-[#FF1F40] py-4 rounded-2xl font-black uppercase italic tracking-widest text-sm shadow-xl shadow-red-900/20 active:scale-95 transition-all flex items-center justify-center gap-2 text-white hover:bg-red-600"
                             >
                                 {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : (
+                                    <>
+                                        <Trash2 size={18} />
+                                        Confirmar Eliminación
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setGroupToDelete(null)}
+                                className={`w-full ${isDarkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all`}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
                                     <>
                                         <Trash2 size={18} />
                                         Eliminar Definitivamente
@@ -811,11 +828,11 @@ const AdminGroupsList = ({ onLogout }: { onLogout: () => void }) => {
                             >
                                 Cancelar
                             </button>
-                        </div>
-                    </div>
-                </div>
+                        </div >
+                    </div >
+                </div >
             )}
-        </div>
+        </div >
     );
 };
 

@@ -84,11 +84,15 @@ const ProfilePage = () => {
         }
     };
 
-    const handleLogout = async () => {
-        if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-            await signOut(auth);
-            navigate('/');
-        }
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    const handleLogout = () => {
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        await signOut(auth);
+        navigate('/');
     };
 
     const MenuItem = ({ icon: Icon, label, subtitle, onClick, isDestructive = false }: any) => (
@@ -213,6 +217,38 @@ const ProfilePage = () => {
                 userData={userData}
                 onUpdate={(newData: any) => setUserData({ ...userData, ...newData })}
             />
+            {/* Logout Confirmation Modal */}
+            {showLogoutModal && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center px-6">
+                    <div className={`absolute inset-0 ${isDarkMode ? 'bg-[#1F2128]/95' : 'bg-[#1F2128]/60'} backdrop-blur-md transition-opacity`} onClick={() => setShowLogoutModal(false)}></div>
+                    <div className={`relative w-full max-w-sm ${isDarkMode ? 'bg-[#262932] border-white/10' : 'bg-white border-gray-200'} rounded-[3rem] border shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200`}>
+                        <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-red-500/10">
+                            <LogOut size={32} strokeWidth={2.5} className="-ml-1" />
+                        </div>
+
+                        <h3 className={`text-xl font-black italic uppercase italic mb-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Cerrar Sesión?</h3>
+                        <p className="text-xs text-gray-400 font-medium leading-relaxed mb-8">
+                            Tendrás que volver a iniciar sesión para acceder a tu cuenta y gestionar tus clases.
+                        </p>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick={confirmLogout}
+                                className="w-full bg-[#FF1F40] py-4 rounded-2xl font-black uppercase italic tracking-widest text-xs shadow-xl shadow-red-900/20 active:scale-95 transition-all text-white hover:bg-red-600"
+                            >
+                                Sí, Cerrar Sesión
+                            </button>
+                            <button
+                                onClick={() => setShowLogoutModal(false)}
+                                className={`w-full ${isDarkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all`}
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
