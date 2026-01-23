@@ -131,35 +131,42 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                 // However, we can try to best-effort match if userProfile exists.
 
                 if (userProfile) {
+                    console.log("[Agenda Debug] UserProfile loaded:", userProfile);
                     // Prioritize 'groups' array, then fallback to 'group'
                     let userGroups = userProfile.groups || [];
                     if (userProfile.group && !userGroups.includes(userProfile.group)) {
                         userGroups = [userProfile.group, ...userGroups];
                     }
+                    console.log("[Agenda Debug] Calculated User Groups:", userGroups);
 
                     if (userGroups.length > 0) {
                         // Try to find a match for ANY of the user's groups in availableGroups
                         // ensuring we use the capitalized name from availableGroups
+                        console.log("[Agenda Debug] Available Groups:", availableGroups.map(g => g.name));
                         const match = availableGroups.find(g =>
                             userGroups.some((ug: string) => ug.toLowerCase() === g.name.toLowerCase())
                         );
 
                         if (match) {
+                            console.log("[Agenda Debug] Match Found:", match.name);
                             setSelectedGroup(match.name);
                         } else {
+                            console.log("[Agenda Debug] No match found. Fallback to:", availableGroups[0].name);
                             // Fallback only if NO match found
                             setSelectedGroup(availableGroups[0].name);
                         }
                     } else {
+                        console.log("[Agenda Debug] User has no groups. Fallback to:", availableGroups[0].name);
                         // User loaded but has no groups? Fallback default
                         setSelectedGroup(availableGroups[0].name);
                     }
                 } else {
+                    console.log("[Agenda Debug] UserProfile is falsey. Waiting...");
                     // Accessing agenda without profile loaded OR guest? 
                     // To prevent flashing wrong group, maybe we don't default yet?
                     // But if it's admin/coach they might rely on default.
                     // Let's safe fallback only if we are sure keys are stable.
-                    setSelectedGroup(availableGroups[0].name);
+                    // setSelectedGroup(availableGroups[0].name); 
                 }
             }
         }
