@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, User, Dumbbell, AlignLeft, Users } from 'lucide-react';
+import { X, Clock, User, Dumbbell, AlignLeft, Users, FileDown } from 'lucide-react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { generateWodPdf } from '../utils/generateWodPdf';
 
 interface WodModalProps {
     isOpen: boolean;
@@ -163,9 +164,13 @@ const WodModal: React.FC<WodModalProps> = ({ isOpen, onClose, classData }) => {
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <Dumbbell size={14} /> Workout of the Day
                             </h3>
-                            <span className="text-[9px] font-black text-[#FF1F40] bg-[#FF1F40]/10 px-2 py-0.5 rounded uppercase">
-                                {wodItems.length} Ejercicios
-                            </span>
+                            <button
+                                onClick={() => generateWodPdf(classData, coachName)}
+                                className="bg-[#FF1F40] text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-transform"
+                            >
+                                <FileDown size={12} />
+                                PDF
+                            </button>
                         </div>
 
 
