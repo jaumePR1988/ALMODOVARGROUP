@@ -181,7 +181,7 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
                 logoImg.onload = resolve;
                 logoImg.onerror = resolve; // Continue even if fails
             });
-            doc.addImage(logoImg, 'PNG', 15, 8, 24, 24);
+            doc.addImage(logoImg, 'PNG', 12, 4, 32, 32);
         } catch (e) {
             // Fallback Circle 'A'
             doc.setFillColor(255, 31, 64);
@@ -193,8 +193,9 @@ const CoachDashboard = ({ onLogout }: { onLogout: () => void }) => {
         }
 
         // Brand Name
+        doc.setTextColor(255, 255, 255);
         doc.setFontSize(22);
-        doc.text("ALMODOVAR BOX", 45, 20);
+        doc.text("ALMODOVAR BOX", 52, 22);
 
         // Subtitle (Red)
         doc.setTextColor(255, 31, 64);
