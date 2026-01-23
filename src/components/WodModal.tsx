@@ -3,6 +3,7 @@ import { X, Clock, User, Dumbbell, AlignLeft, Users, FileDown } from 'lucide-rea
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { generateWodPdf } from '../utils/generateWodPdf';
+import { generateStoryImage } from '../utils/generateStoryImage';
 
 interface WodModalProps {
     isOpen: boolean;
@@ -187,13 +188,22 @@ const WodModal: React.FC<WodModalProps> = ({ isOpen, onClose, classData }) => {
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <Dumbbell size={14} /> Workout of the Day
                             </h3>
-                            <button
-                                onClick={() => generateWodPdf(classData, coachName)}
-                                className="bg-[#FF1F40] text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-transform"
-                            >
-                                <FileDown size={12} />
-                                PDF
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => generateStoryImage(classData, coachName)}
+                                    className="bg-purple-600 text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-transform"
+                                >
+                                    <FileDown size={12} />
+                                    Story
+                                </button>
+                                <button
+                                    onClick={() => generateWodPdf(classData, coachName)}
+                                    className="bg-[#FF1F40] text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-transform"
+                                >
+                                    <FileDown size={12} />
+                                    PDF
+                                </button>
+                            </div>
                         </div>
 
 
