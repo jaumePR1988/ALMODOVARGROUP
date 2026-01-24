@@ -4,7 +4,8 @@ import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { urlToBase64 } from './imageUtils';
 
-export const generateWodPdf = async (classData: any, coachName: string = 'Coach') => {
+
+export const generateWodPdf = async (classData: any, coachName: string = 'Coach', imagesMap: { [key: string]: string } = {}) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -80,9 +81,16 @@ export const generateWodPdf = async (classData: any, coachName: string = 'Coach'
         let imgData = null;
         if (item.exerciseId) {
             try {
-                const exDoc = await getDoc(doc(db, 'exercises', item.exerciseId));
-                if (exDoc.exists() && exDoc.data().imageUrl) {
-                    imgData = await urlToBase64(exDoc.data().imageUrl);
+                // 1. Try passing pre-loaded image from modal (if valid URL)
+                if (imagesMap[item.exerciseId]) {
+                    imgData = await urlToBase64(imagesMap[item.exerciseId]);
+                }
+                // 2. Fallback to fetching it directly
+                else {
+                    const exDoc = await getDoc(doc(db, 'exercises', item.exerciseId));
+                    if (exDoc.exists() && exDoc.data().imageUrl) {
+                        imgData = await urlToBase64(exDoc.data().imageUrl);
+                    }
                 }
             } catch (e) { }
         }

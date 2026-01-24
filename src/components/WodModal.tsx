@@ -190,7 +190,7 @@ const WodModal: React.FC<WodModalProps> = ({ isOpen, onClose, classData }) => {
                             </h3>
                             <div className="flex justify-end">
                                 <button
-                                    onClick={() => generateWodPdf(classData, coachName)}
+                                    onClick={() => generateWodPdf(classData, coachName, exerciseImages)}
                                     className="bg-[#FF1F40] text-white text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest flex items-center gap-1.5 active:scale-95 transition-transform"
                                 >
                                     <FileDown size={12} />
