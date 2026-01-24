@@ -502,8 +502,13 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                             const isReserved = !!status;
                             const isFull = item.currentCapacity >= item.maxCapacity;
 
+                            const classDateTime = new Date(`${item.date}T${item.startTime}`);
+                            const now = new Date();
+                            const isPast = classDateTime < now;
+                            const isCoach = userProfile?.role === 'coach';
+
                             return (
-                                <div key={item.id} className="relative bg-white dark:bg-[#2A2D3A] p-4 rounded-3xl flex items-center justify-between shadow-sm border border-gray-100 dark:border-gray-800">
+                                <div key={item.id} className={`relative bg-white dark:bg-[#2A2D3A] p-4 rounded-3xl flex items-center justify-between shadow-sm border border-gray-100 dark:border-gray-800 ${isPast ? 'opacity-60 grayscale' : ''}`}>
                                     <div className="flex items-center gap-4">
                                         {/* Time Column */}
                                         <div className="flex flex-col items-center w-12">
@@ -529,24 +534,31 @@ const Agenda = ({ onLogout }: { onLogout?: () => void }) => {
                                     ></div>
 
                                     {/* Button */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation(); // Prevent opening WOD modal
-                                            isReserved ? handleCancel(item.id) : handleReserve(item.id, item.currentCapacity, item.maxCapacity);
-                                        }}
-                                        className={`
-                                        relative z-10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
-                                    ${status === 'confirmed' ? 'bg-red-500 text-white' :
-                                                status === 'waitlist' ? 'bg-orange-500 text-white' :
-                                                    isFull ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}
-                                `}
-                                    >
-                                        {status === 'confirmed' ? 'CANCELAR' :
-                                            status === 'waitlist' ? 'EN COLA' :
-                                                isFull ? 'COLA' : 'RESERVAR'}
-                                    </button>
+                                    {!isCoach && (
+                                        <button
+                                            disabled={isPast}
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevent opening WOD modal
+                                                if (isPast) return;
+                                                isReserved ? handleCancel(item.id) : handleReserve(item.id, item.currentCapacity, item.maxCapacity);
+                                            }}
+                                            className={`
+                                            relative z-10 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                                            ${isPast ? 'bg-gray-400 text-white cursor-not-allowed' :
+                                                    status === 'confirmed' ? 'bg-red-500 text-white' :
+                                                        status === 'waitlist' ? 'bg-orange-500 text-white' :
+                                                            isFull ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}
+                                        `}
+                                        >
+                                            {isPast ? 'FINALIZADO' :
+                                                status === 'confirmed' ? 'CANCELAR' :
+                                                    status === 'waitlist' ? 'EN COLA' :
+                                                        isFull ? 'COLA' : 'RESERVAR'}
+                                        </button>
+                                    )}
                                 </div>
                             );
+
                         })
                     )}
                 </section>

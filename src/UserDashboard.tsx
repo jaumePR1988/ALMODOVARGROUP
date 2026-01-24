@@ -15,6 +15,7 @@ import BottomNavigation from './components/BottomNavigation';
 import PremiumModal from './components/PremiumModal';
 import TopHeader from './components/TopHeader';
 import WodModal from './components/WodModal';
+import ClassReviewModal from './components/ClassReviewModal';
 import { db, auth } from './firebase';
 import { collection, onSnapshot, query, orderBy, getDoc, doc, updateDoc, increment, where, limit, deleteDoc, getDocs } from 'firebase/firestore';
 
@@ -35,6 +36,22 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [modalConfig, setModalConfig] = useState<any>({ isOpen: false, type: 'info', title: '', message: '' });
   const [selectedWod, setSelectedWod] = useState<any>(null);
   const [isWodModalOpen, setIsWodModalOpen] = useState(false);
+  const [selectedReviewClass, setSelectedReviewClass] = useState<any>(null); // { classData, reservationId }
+  const [userReviews, setUserReviews] = useState<{ [key: string]: any }>({}); // Map by reservationId
+
+  useEffect(() => {
+    if (!userId) return;
+    const q = query(collection(db, 'reviews'), where('userId', '==', userId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const map: any = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        map[data.reservationId] = data; // Map using reservationId as key
+      });
+      setUserReviews(map);
+    });
+    return () => unsubscribe();
+  }, [userId]);
 
 
   useEffect(() => {
@@ -383,6 +400,16 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
         onClose={() => setIsWodModalOpen(false)}
         classData={selectedWod}
       />
+      <ClassReviewModal
+        isOpen={!!selectedReviewClass}
+        onClose={() => setSelectedReviewClass(null)}
+        classData={selectedReviewClass?.classData}
+        reservationId={selectedReviewClass?.reservationId}
+        onSuccess={() => {
+          // Optional: Show success toast
+          setModalConfig({ isOpen: true, type: 'success', title: '¡Gracias!', message: 'Tu valoración ha sido enviada.', onConfirm: () => setModalConfig((p: any) => ({ ...p, isOpen: false })) });
+        }}
+      />
       <div className="max-w-[440px] mx-auto p-4 sm:p-6 space-y-6">
 
         {/* Global Notification */}
@@ -470,77 +497,127 @@ const UserDashboard = ({ onLogout }: { onLogout: () => void }) => {
             </div>
           ) : (
             <div className="space-y-3">
-              {userReservations.map((res: any) => (
-                <div key={res.id}
-                  onClick={() => { setSelectedWod(res.classData); setIsWodModalOpen(true); }}
-                  className="bg-white dark:bg-[#2A2D3A] rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all"
-                >
-                  {/* Status Color Bar (Left Edge) */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-2 z-10 
-                                ${res.data.status === 'confirmed' ? 'bg-[#FF1F40]' :
-                      res.data.status === 'waitlist' ? 'bg-orange-500' : 'bg-green-500'}`}
-                  />
+              {userReservations.map((res: any) => {
+                const classDate = new Date(`${res.classData.date}T${res.classData.startTime}`);
+                const now = new Date();
+                const isPast = classDate < now;
+                const isAttended = res.data.attended === true;
+                const isMissed = isPast && !isAttended; // Missed if past and not marked attended
 
-                  <div className="flex">
-                    {/* Hero Image (Left 35%) */}
-                    <div className="w-[35%] min-h-[140px] relative">
-                      <img
-                        src={res.classData.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white backdrop-blur-[1px]">
-                        <span className="text-3xl font-black leading-none shadow-black drop-shadow-md">{new Date(res.classData.date).getDate()}</span>
-                        <span className="text-[10px] font-bold uppercase opacity-90 shadow-black drop-shadow-md">
-                          {new Date(res.classData.date).toLocaleDateString('es-ES', { month: 'short' })}
-                        </span>
+                // Check if already reviewed
+                const existingReview = userReviews[res.id]; // Map by reservationId
+
+                return (
+                  <div key={res.id}
+                    onClick={() => { setSelectedWod(res.classData); setIsWodModalOpen(true); }}
+                    className={`bg-white dark:bg-[#2A2D3A] rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 relative overflow-hidden group cursor-pointer hover:shadow-md transition-all`}
+                  >
+                    {/* Status Color Bar (Left Edge) */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-2 z-10 
+                                  ${res.data.status === 'confirmed' ? 'bg-[#FF1F40]' :
+                        res.data.status === 'waitlist' ? 'bg-orange-500' : 'bg-green-500'}`}
+                    />
+
+                    {/* ATTENDANCE STAMPS */}
+                    {isAttended && (
+                      <div className="absolute top-2 right-2 z-20 bg-green-500 text-white text-[8px] font-black uppercase px-2 py-1 rounded-lg shadow-lg rotate-12 border-2 border-white dashed-border">
+                        COMPLETADA
                       </div>
-                    </div>
+                    )}
+                    {isMissed && res.data.status === 'confirmed' && (
+                      <div className="absolute top-4 right-4 z-20 bg-red-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg shadow-xl -rotate-12 border-2 border-white tracking-widest">
+                        NO REALIZADA
+                      </div>
+                    )}
 
-                    {/* Details (Right 65%) */}
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-black uppercase italic text-lg leading-tight dark:text-white line-clamp-2">
-                            {res.classData.name}
-                          </h3>
+                    <div className={`flex ${isMissed ? 'grayscale opacity-60' : ''}`}>
+                      {/* Hero Image (Left 35%) */}
+                      <div className="w-[35%] min-h-[140px] relative">
+                        <img
+                          src={res.classData.imageUrl || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80"}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white backdrop-blur-[1px]">
+                          <span className="text-3xl font-black leading-none shadow-black drop-shadow-md">{new Date(res.classData.date).getDate()}</span>
+                          <span className="text-[10px] font-bold uppercase opacity-90 shadow-black drop-shadow-md">
+                            {new Date(res.classData.date).toLocaleDateString('es-ES', { month: 'short' })}
+                          </span>
                         </div>
+                      </div>
 
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-3 text-sm text-gray-500 font-medium">
-                            <span className="flex items-center gap-1"><Clock size={14} /> {res.classData.startTime}</span>
+                      {/* Details (Right 65%) */}
+                      <div className="flex-1 p-4 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-black uppercase italic text-lg leading-tight dark:text-white line-clamp-2">
+                              {res.classData.name}
+                            </h3>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {/* Capacity Indicator */}
-                            <div className="flex-1 h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[#FF1F40] rounded-full"
-                                style={{ width: `${Math.min(100, (res.classData.currentCapacity / res.classData.maxCapacity) * 100)}%` }}
-                              ></div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3 text-sm text-gray-500 font-medium">
+                              <span className="flex items-center gap-1"><Clock size={14} /> {res.classData.startTime}</span>
                             </div>
-                            <span className="text-[10px] font-bold text-gray-400">
-                              {res.classData.currentCapacity}/{res.classData.maxCapacity}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {/* Capacity Indicator */}
+                              <div className="flex-1 h-1.5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-[#FF1F40] rounded-full"
+                                  style={{ width: `${Math.min(100, (res.classData.currentCapacity / res.classData.maxCapacity) * 100)}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-400">
+                                {res.classData.currentCapacity}/{res.classData.maxCapacity}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Action Button */}
-                      <div className="mt-4 flex justify-end">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCancelReservation(res.id, res.classData.id);
-                          }}
-                          className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-[#FF1F40] text-xs font-black uppercase text-center border border-red-100 dark:border-red-900/50 hover:bg-[#FF1F40] hover:text-white transition-all shadow-sm"
-                        >
-                          Cancelar
-                        </button>
+                        {/* Action Buttons */}
+                        <div className="mt-4 flex justify-end gap-2">
+                          {/* REVIEW BUTTON */}
+                          {isAttended && !existingReview && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedReviewClass({ classData: res.classData, reservationId: res.id });
+                              }}
+                              className="px-4 py-2 rounded-xl bg-yellow-400 text-black text-xs font-black uppercase text-center hover:scale-105 transition-all shadow-sm animate-pulse"
+                            >
+                              ⭐ Evaluar
+                            </button>
+                          )}
+
+                          {/* SHOW STARS IF REVIEWED */}
+                          {isAttended && existingReview && (
+                            <div className="flex flex-col items-end">
+                              <div className="flex text-yellow-500">
+                                {[1, 2, 3, 4, 5].map(s => (
+                                  <svg key={s} width="12" height="12" viewBox="0 0 24 24" fill={existingReview.ratings.general >= s ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                ))}
+                              </div>
+                              <span className="text-[8px] font-black uppercase text-gray-400">Valorado</span>
+                            </div>
+                          )}
+
+                          {!isPast && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelReservation(res.id, res.classData.id);
+                              }}
+                              className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-[#FF1F40] text-xs font-black uppercase text-center border border-red-100 dark:border-red-900/50 hover:bg-[#FF1F40] hover:text-white transition-all shadow-sm"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
