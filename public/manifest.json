@@ -1,0 +1,25 @@
+{
+  "name": "Almodovar Group",
+  "short_name": "Almodovar",
+  "description": "Tu espacio premium de entrenamiento. Sistema de reservas y seguimiento exclusivo.",
+  "theme_color": "#121212",
+  "background_color": "#121212",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "id": "/",
+  "icons": [
+    {
+      "src": "pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

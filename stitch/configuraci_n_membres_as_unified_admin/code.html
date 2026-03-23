@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-primary": "#bb152c",
+              "background": "#131313",
+              "secondary-fixed": "#c7e7ff",
+              "secondary-container": "#0b4e6e",
+              "surface-tint": "#ffb3b1",
+              "on-tertiary-container": "#002f31",
+              "on-secondary": "#00344c",
+              "primary-container": "#ff535b",
+              "outline": "#ab8987",
+              "tertiary": "#9ecfd1",
+              "surface-dim": "#131313",
+              "on-secondary-fixed": "#001e2e",
+              "on-primary-fixed-variant": "#92001c",
+              "on-tertiary": "#003739",
+              "primary-fixed": "#ffdad8",
+              "on-primary-container": "#5b000e",
+              "tertiary-fixed": "#b9ecee",
+              "on-primary-fixed": "#410007",
+              "outline-variant": "#5b403f",
+              "on-background": "#e5e2e1",
+              "on-error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#064c6b",
+              "surface-container-highest": "#353534",
+              "tertiary-fixed-dim": "#9ecfd1",
+              "on-primary": "#680011",
+              "on-tertiary-fixed-variant": "#1a4e50",
+              "tertiary-container": "#68999b",
+              "secondary": "#98cdf2",
+              "inverse-on-surface": "#313030",
+              "on-secondary-container": "#8abfe4",
+              "on-error": "#690005",
+              "inverse-surface": "#e5e2e1",
+              "surface-bright": "#393939",
+              "primary": "#ffb3b1",
+              "on-surface": "#e5e2e1",
+              "surface": "#131313",
+              "surface-container-lowest": "#0e0e0e",
+              "surface-variant": "#353534",
+              "error": "#ffb4ab",
+              "surface-container": "#201f1f",
+              "secondary-fixed-dim": "#98cdf2",
+              "primary-fixed-dim": "#ffb3b1",
+              "surface-container-high": "#2a2a2a",
+              "on-tertiary-fixed": "#002021",
+              "surface-container-low": "#1c1b1b",
+              "on-surface-variant": "#e4bebc",
+              "error-container": "#93000a"
+            },
+            fontFamily: {
+              "headline": ["Lexend"],
+              "body": ["Inter"],
+              "label": ["Lexend"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #131313; }
+        ::-webkit-scrollbar-thumb { background: #353534; border-radius: 10px; }
+        .kinetic-gradient { background: linear-gradient(135deg, #ff535b 0%, #CF0A0A 100%); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar from COMPONENTS_34 -->
+<header class="fixed top-0 left-0 w-full flex justify-between items-center px-6 h-20 max-w-[480px] mx-auto z-50 bg-[#131313] backdrop-blur-xl bg-opacity-80">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#CF0A0A] hover:bg-white/5 transition-colors p-2 rounded-full cursor-pointer">menu</span>
+<span class="text-2xl font-black tracking-tighter text-[#CF0A0A] font-headline uppercase">ALMODÓVAR</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant/20 hover:bg-white/5 transition-colors cursor-pointer">
+<img alt="Admin profile avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChsMYk_IUXUIOWzSzkjDUjUKeNMxgio8B-Iwt30x45A9-ya4PMFiacqFTm5UvEbdmUaUB2rYftO7swDResjdoOPdi3f401gpLwbl5K3vGt-TSlAVDG8vu1AAj6vV8WaaoFMkwe08Gma6xYIYPa3XJm8Y5YhnzwSBxhRvcj1tBoHvNYXCd_0OszvqwvRuoyYzVPdud4bOqToleKeR2OnIH3BCSiOCi3kur5JhfejYKr9ip3RKglIM4W40cAqg62OgE90AUUncyuW-8"/>
+</div>
+</header>
+<main class="pt-24 pb-32 max-w-[480px] mx-auto px-6">
+<!-- Header Section -->
+<section class="mb-10">
+<h1 class="font-headline text-5xl font-black tracking-tighter uppercase leading-none mb-2">AJUSTES DEL<br/><span class="text-primary-container">SISTEMA</span></h1>
+<p class="font-label text-xs text-neutral-500 tracking-widest uppercase">Gestión del Centro y Modelos de Ingresos</p>
+</section>
+<!-- General Center Settings Bento -->
+<div class="grid grid-cols-1 gap-4 mb-12">
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-8xl">settings</span>
+</div>
+<h2 class="font-headline text-xl font-bold uppercase mb-6 flex items-center gap-2">
+<span class="w-2 h-6 bg-primary-container block"></span>
+                    Operaciones del Centro
+                </h2>
+<div class="space-y-6">
+<div>
+<label class="block font-label text-[10px] tracking-widest text-neutral-500 uppercase mb-2">Nombre del Centro</label>
+<input class="w-full bg-surface-container-high border-none text-on-surface font-headline font-medium py-4 px-4 rounded-lg focus:ring-1 focus:ring-primary-container outline-none transition-all" type="text" value="ALMODÓVAR HQ - MADRID"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block font-label text-[10px] tracking-widest text-neutral-500 uppercase mb-2">Límite de Capacidad</label>
+<input class="w-full bg-surface-container-high border-none text-on-surface font-headline font-bold py-4 px-4 rounded-lg focus:ring-1 focus:ring-primary-container outline-none transition-all" type="number" value="45"/>
+</div>
+<div>
+<label class="block font-label text-[10px] tracking-widest text-neutral-500 uppercase mb-2">Ventana de Check-in</label>
+<div class="relative">
+<input class="w-full bg-surface-container-high border-none text-on-surface font-headline font-bold py-4 px-4 rounded-lg focus:ring-1 focus:ring-primary-container outline-none transition-all" type="text" value="15 MIN"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Membership Management Section -->
+<section class="mb-12">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-headline text-2xl font-black uppercase tracking-tighter">PLANES DE MEMBRESÍA</h2>
+<p class="text-neutral-500 text-xs uppercase tracking-widest">Niveles de ingresos activos</p>
+</div>
+<button class="bg-surface-container-highest p-3 rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Plan Cards -->
+<div class="space-y-4">
+<!-- Tier 1 -->
+<div class="bg-surface-container-low border-l-4 border-primary-container p-6 rounded-r-xl">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline text-lg font-bold uppercase">Esencial</h3>
+<div class="flex gap-1 mt-2">
+<div class="w-4 h-1.5 bg-primary-container"></div>
+<div class="w-4 h-1.5 bg-surface-container-highest"></div>
+<div class="w-4 h-1.5 bg-surface-container-highest"></div>
+</div>
+</div>
+<div class="text-right">
+<span class="font-headline text-2xl font-black text-on-surface">49€</span>
+<span class="block text-[10px] text-neutral-500 tracking-widest uppercase">Al Mes</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm">fitness_center</span>
+<span class="text-xs font-label uppercase tracking-wider text-neutral-400">1 sesión / sem</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm">bolt</span>
+<span class="text-xs font-label uppercase tracking-wider text-neutral-400">Acceso Estándar</span>
+</div>
+</div>
+<div class="mt-6 flex gap-2">
+<button class="flex-1 bg-surface-container-high py-3 font-headline text-[10px] font-bold tracking-widest uppercase rounded hover:bg-neutral-800 transition-colors">Editar Plan</button>
+<button class="w-12 bg-surface-container-high flex items-center justify-center rounded hover:bg-error-container/20 hover:text-error transition-colors">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+<!-- Tier 2 -->
+<div class="bg-surface-container-low border-l-4 border-primary-container p-6 rounded-r-xl">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-headline text-lg font-bold uppercase">Pro Performer</h3>
+<div class="flex gap-1 mt-2">
+<div class="w-4 h-1.5 bg-primary-container"></div>
+<div class="w-4 h-1.5 bg-primary-container"></div>
+<div class="w-4 h-1.5 bg-surface-container-highest"></div>
+</div>
+</div>
+<div class="text-right">
+<span class="font-headline text-2xl font-black text-on-surface">89€</span>
+<span class="block text-[10px] text-neutral-500 tracking-widest uppercase">Al Mes</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm">fitness_center</span>
+<span class="text-xs font-label uppercase tracking-wider text-neutral-400">2 sesiones / sem</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm">bolt</span>
+<span class="text-xs font-label uppercase tracking-wider text-neutral-400">Reserva Prioritaria</span>
+</div>
+</div>
+<div class="mt-6 flex gap-2">
+<button class="flex-1 bg-surface-container-high py-3 font-headline text-[10px] font-bold tracking-widest uppercase rounded hover:bg-neutral-800 transition-colors">Editar Plan</button>
+<button class="w-12 bg-surface-container-high flex items-center justify-center rounded hover:bg-error-container/20 hover:text-error transition-colors">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+<!-- Tier 3 (Elite) -->
+<div class="relative group overflow-hidden rounded-xl">
+<div class="absolute inset-0 kinetic-gradient opacity-10"></div>
+<div class="relative bg-surface-container-low/80 backdrop-blur-sm border-l-4 border-primary-container p-6 rounded-r-xl">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h3 class="font-headline text-lg font-bold uppercase">Elite Almodóvar</h3>
+<span class="bg-primary-container text-[8px] px-1.5 py-0.5 text-on-primary-container font-black uppercase tracking-tighter">Más Vendido</span>
+</div>
+<div class="flex gap-1 mt-2">
+<div class="w-4 h-1.5 bg-primary-container"></div>
+<div class="w-4 h-1.5 bg-primary-container"></div>
+<div class="w-4 h-1.5 bg-primary-container"></div>
+</div>
+</div>
+<div class="text-right">
+<span class="font-headline text-2xl font-black text-on-surface">129€</span>
+<span class="block text-[10px] text-neutral-500 tracking-widest uppercase">Al Mes</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm">fitness_center</span>
+<span class="text-xs font-label uppercase tracking-wider text-neutral-400">3 sesiones / sem</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm">bolt</span>
+<span class="text-xs font-label uppercase tracking-wider text-neutral-400">Acceso VIP Total</span>
+</div>
+</div>
+<div class="mt-6 flex gap-2">
+<button class="flex-1 kinetic-gradient py-3 font-headline text-[10px] font-black tracking-widest uppercase rounded shadow-lg shadow-primary-container/20">Editar Nivel Elite</button>
+<button class="w-12 bg-surface-container-high flex items-center justify-center rounded">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Weekly Credit Logic -->
+<section class="mb-12 bg-surface-container p-6 rounded-xl border border-outline-variant/10">
+<h2 class="font-headline text-xl font-bold uppercase mb-2">RENOVACIÓN SEMANAL</h2>
+<p class="text-neutral-500 text-xs mb-8 uppercase tracking-widest leading-relaxed">Define cómo se comportan los créditos no utilizados al final de la semana.</p>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg border border-transparent hover:border-primary-container/30 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary-container">event_busy</span>
+<div>
+<span class="block font-headline text-sm font-bold uppercase">REINICIO TOTAL</span>
+<span class="text-[10px] text-neutral-500 uppercase tracking-tighter">Los créditos caducan cada domingo 23:59</span>
+</div>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-primary-container flex items-center justify-center">
+<div class="w-2.5 h-2.5 bg-primary-container rounded-full"></div>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg border border-transparent opacity-50 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined">history</span>
+<div>
+<span class="block font-headline text-sm font-bold uppercase">RENOVACIÓN DINÁMICA</span>
+<span class="text-[10px] text-neutral-500 uppercase tracking-tighter">Los créditos no usados se acumulan +1 semana</span>
+</div>
+</div>
+<div class="w-5 h-5 rounded-full border-2 border-neutral-600"></div>
+</div>
+</div>
+</section>
+<!-- Global Save Action -->
+<button class="w-full h-16 kinetic-gradient rounded-xl font-headline text-sm font-black tracking-[0.2em] uppercase text-white shadow-[0_20px_40px_rgba(207,10,10,0.3)] active:scale-95 transition-all">
+            Actualizar Registro del Sistema
+        </button>
+</main>
+<!-- Admin BottomNavBar from COMPONENTS_34 -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 max-w-[480px] mx-auto bg-[#1c1b1b] backdrop-blur-lg bg-opacity-90 rounded-t-xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+<a class="flex flex-col items-center justify-center text-gray-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-headline font-bold text-[10px] uppercase tracking-wider mt-1">RESUMEN</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-headline font-bold text-[10px] uppercase tracking-wider mt-1">USUARIOS</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#CF0A0A] bg-[#CF0A0A]/10 rounded-xl px-4 py-1 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-headline font-bold text-[10px] uppercase tracking-wider mt-1">AJUSTES</span>
+</a>
+</nav>
+</body></html>

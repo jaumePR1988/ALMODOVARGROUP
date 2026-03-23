@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Almodóvar Group Fitness - Pago</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800;900&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-primary": "#bb152c",
+                        "background": "#131313",
+                        "secondary-fixed": "#c7e7ff",
+                        "secondary-container": "#0b4e6e",
+                        "surface-tint": "#ffb3b1",
+                        "on-tertiary-container": "#002f31",
+                        "on-secondary": "#00344c",
+                        "primary-container": "#ff535b",
+                        "outline": "#ab8987",
+                        "tertiary": "#9ecfd1",
+                        "surface-dim": "#131313",
+                        "on-secondary-fixed": "#001e2e",
+                        "on-primary-fixed-variant": "#92001c",
+                        "on-tertiary": "#003739",
+                        "primary-fixed": "#ffdad8",
+                        "on-primary-container": "#5b000e",
+                        "tertiary-fixed": "#b9ecee",
+                        "on-primary-fixed": "#410007",
+                        "outline-variant": "#5b403f",
+                        "on-background": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-fixed-variant": "#064c6b",
+                        "surface-container-highest": "#353534",
+                        "tertiary-fixed-dim": "#9ecfd1",
+                        "on-primary": "#680011",
+                        "on-tertiary-fixed-variant": "#1a4e50",
+                        "tertiary-container": "#68999b",
+                        "secondary": "#98cdf2",
+                        "inverse-on-surface": "#313030",
+                        "on-secondary-container": "#8abfe4",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-bright": "#393939",
+                        "primary": "#ffb3b1",
+                        "on-surface": "#e5e2e1",
+                        "surface": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-variant": "#353534",
+                        "error": "#ffb4ab",
+                        "surface-container": "#201f1f",
+                        "secondary-fixed-dim": "#98cdf2",
+                        "primary-fixed-dim": "#ffb3b1",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary-fixed": "#002021",
+                        "surface-container-low": "#1c1b1b",
+                        "on-surface-variant": "#e4bebc",
+                        "error-container": "#93000a"
+                    },
+                    fontFamily: {
+                        "headline": ["Lexend"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .kinetic-gradient {
+            background: linear-gradient(135deg, #CF0A0A 0%, #5b000e 100%);
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            background: rgba(28, 27, 27, 0.8);
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body antialiased">
+<!-- TopAppBar from {{DATA:COMPONENTS:COMPONENTS_34}} -->
+<header class="fixed top-0 left-0 w-full flex justify-between items-center px-6 h-20 max-w-[480px] mx-auto z-50 bg-[#131313] backdrop-blur-xl bg-opacity-80 right-0">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-white/70 hover:bg-white/5 transition-colors p-2 rounded-full cursor-pointer active:scale-95">menu</span>
+<h1 class="text-2xl font-black tracking-tighter text-[#CF0A0A] font-headline uppercase italic">ALMODÓVAR</h1>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border border-white/10 active:scale-95 transition-transform">
+<img alt="Profile Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEPpQ9hN6zw0X7uWuxyhgHgywXL0UWE8ab_jNjpAcxBGsTLNm2C0kvE0trm9I6U3wb1uMYQCJkPACtP6czbUOf8x_tSiE1kP6HOqZp9_ptKAdsDHl30GumzbMPT1E7kDgwaqSP8uAFsyq6iVKX3TB1EEY3S5cokAxWJPGw5IfSIGNni5tJgYRLPPTxK-OPpbjB4ob0-k47OZ2p4AYl3AY27gm_EGEF4pnglwR01lQBjMrg-Ic6k7TwUgAEh8KnBYZneXPyB9rf8ys"/>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-[480px] mx-auto min-h-screen">
+<!-- Page Title -->
+<div class="mb-10">
+<p class="font-headline font-bold text-red-600 text-[10px] tracking-[0.3em] uppercase mb-2">ACCESO DE SOCIOS</p>
+<h2 class="font-headline text-5xl font-black tracking-tighter leading-none">SELECCIÓN<br/>DE PACKS</h2>
+</div>
+<!-- Pack Selection Cards -->
+<section class="space-y-4 mb-12">
+<!-- 1 Session Pack -->
+<label class="relative block cursor-pointer group">
+<input checked="" class="peer hidden" name="pack" type="radio"/>
+<div class="p-6 rounded-xl bg-surface-container-low border-2 border-transparent peer-checked:border-red-600 transition-all duration-300">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-headline font-bold text-3xl">01</p>
+<p class="font-label text-xs tracking-widest opacity-60 uppercase">SESIÓN INDIVIDUAL</p>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-2xl text-red-500">18€</p>
+<p class="text-[10px] opacity-40 uppercase">PAGO ÚNICO</p>
+</div>
+</div>
+</div>
+</label>
+<!-- 3 Sessions Pack (Featured) -->
+<label class="relative block cursor-pointer group">
+<input class="peer hidden" name="pack" type="radio"/>
+<div class="p-6 rounded-xl bg-surface-container-high border-2 border-transparent peer-checked:border-red-600 transition-all duration-300 relative overflow-hidden">
+<div class="absolute top-0 right-0 bg-red-600 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white">RECOMENDADO</div>
+<div class="flex justify-between items-start">
+<div>
+<p class="font-headline font-bold text-3xl">03</p>
+<p class="font-label text-xs tracking-widest opacity-60 uppercase">PACK KINETIC</p>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-2xl text-red-500">45€</p>
+<p class="text-[10px] opacity-40 uppercase">15€ / SESIÓN</p>
+</div>
+</div>
+</div>
+</label>
+<!-- 10 Sessions Pack -->
+<label class="relative block cursor-pointer group">
+<input class="peer hidden" name="pack" type="radio"/>
+<div class="p-6 rounded-xl bg-surface-container-low border-2 border-transparent peer-checked:border-red-600 transition-all duration-300">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-headline font-bold text-3xl">10</p>
+<p class="font-label text-xs tracking-widest opacity-60 uppercase">POWER PACK</p>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-2xl text-red-500">120€</p>
+<p class="text-[10px] opacity-40 uppercase">12€ / SESIÓN</p>
+</div>
+</div>
+</div>
+</label>
+</section>
+<!-- Stripe Payment UI -->
+<section class="bg-surface-container p-8 rounded-xl shadow-2xl">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline font-bold tracking-tight text-lg uppercase">DATOS DE PAGO</h3>
+<div class="flex items-center gap-1 opacity-50">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+<span class="text-[10px] font-black tracking-widest uppercase">SEGURO</span>
+</div>
+</div>
+<form class="space-y-6">
+<!-- Cardholder Name -->
+<div class="space-y-1.5">
+<label class="font-label text-[10px] tracking-widest opacity-50 uppercase font-bold px-1">TITULAR DE LA TARJETA</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface placeholder:opacity-20 focus:ring-1 focus:ring-red-600 transition-all font-body text-sm tracking-wide" placeholder="NOMBRE COMPLETO" type="text"/>
+</div>
+<!-- Card Number -->
+<div class="space-y-1.5">
+<label class="font-label text-[10px] tracking-widest opacity-50 uppercase font-bold px-1">NÚMERO DE TARJETA</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface placeholder:opacity-20 focus:ring-1 focus:ring-red-600 transition-all font-body text-sm tracking-[0.2em]" placeholder="0000 0000 0000 0000" type="text"/>
+<div class="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+<img alt="Visa" class="h-4 opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIWoe7I7tYxP5LgePe1IzUs3r85i2ziPzToROapxHbkF-uczSQMoeKLVfU7Yxd2EvpV_mKR5ko_EphuyAzzNfy-JjoEVh_wQLJyegmCT4BJ8nyrC948BHT_hiJ9Gk43iO3fvG1weo1sljKu2X_bRmL2oILK76JTDKnpwuxPi7oLY5QGg8H9PcLeeEFl4eru6pRf60FF29XT0jv1d5KfUEsPFk_IDidNTJE5yV1_KFfXbNiplXN8xJbQ2cUhnH419wlYte_Uk1ZURc"/>
+<img alt="Mastercard" class="h-4 opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBl-d2Zdddq5CgA5P1moaBOGcqU7yMdOHu-AsEDW_mx6e9lu48M3YLe7HMfG0hyPncYHhW-rmUsbxAaQSJt111N82swn0poPVwfLV--8HhKFF-Qc97eioQYCWxhUQm3kP0vOA3oA3RzilW4_wyzlan64sxNjXweK9nVZA1Ndurklsl3HCJe5cvVP8v2cBDFfLSYWocI4nebsoh8vTQC2h9cICGtBZ6Ey6uFWK1VnFJ0TSibXcpkmj2aT3J0b5TebEBYyClCOkPAHWQ"/>
+</div>
+</div>
+</div>
+<!-- Expiry and CVC -->
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="font-label text-[10px] tracking-widest opacity-50 uppercase font-bold px-1">CADUCIDAD</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface placeholder:opacity-20 focus:ring-1 focus:ring-red-600 transition-all font-body text-sm" placeholder="MM/AA" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="font-label text-[10px] tracking-widest opacity-50 uppercase font-bold px-1">CVC</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface placeholder:opacity-20 focus:ring-1 focus:ring-red-600 transition-all font-body text-sm" placeholder="***" type="password"/>
+</div>
+</div>
+<!-- Stripe Logo -->
+<div class="flex justify-center pt-2">
+<img alt="Pago seguro con Stripe" class="h-6 grayscale opacity-40 hover:grayscale-0 transition-all cursor-pointer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCr95o_Goi7yHgmcNYFfBlR2aFTJKqIOYrcEPJHXQSpu0RgELfe8x3-KMJZ0J0rmeUn0bJXvDm7aCIizU2zJpxAM0DCzHTLR_OiEctcs8mRMMHwuiDdOWl9wygJ-LJ4TwK-J5DaOtkg_d9Rv0giUm8RPlE5yY4p8xoZ3Dd0HEyXLeMO9xttZTmA-2GgLrbu39q1lcJg9zqcB1ZAUiI7cIvgPUP0uN73WhHsDdLmNTeNTuw9oanM0uAF5n8-_ba8rWAaVUV7DZtQKw"/>
+</div>
+<!-- Submit Button -->
+<button class="w-full h-16 kinetic-gradient rounded-xl font-headline font-black text-white uppercase tracking-widest text-sm shadow-xl shadow-red-900/20 active:scale-95 transition-all" type="submit">
+                    CONFIRMAR PAGO
+                </button>
+</form>
+</section>
+<p class="text-center mt-8 text-[10px] opacity-30 tracking-tight px-8">
+            Al confirmar, aceptas nuestras condiciones de servicio y política de cancelación de sesiones (24h de antelación).
+        </p>
+</main>
+<!-- USER BottomNavBar from {{DATA:COMPONENTS:COMPONENTS_34}} -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 max-w-[480px] mx-auto bg-[#1c1b1b] backdrop-blur-lg bg-opacity-90 rounded-t-xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] right-0">
+<a class="flex flex-col items-center justify-center text-gray-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-headline font-bold text-[10px] uppercase tracking-wider">INICIO</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">fitness_center</span>
+<span class="font-headline font-bold text-[10px] uppercase tracking-wider">CLASES</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#CF0A0A] bg-[#CF0A0A]/10 rounded-xl px-4 py-1 scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-headline font-bold text-[10px] uppercase tracking-wider">PERFIL</span>
+</a>
+</nav>
+</body></html>
