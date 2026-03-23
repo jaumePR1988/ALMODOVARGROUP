@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Info, Navigation, Calendar } from 'lucide-react';
+import { Info, Navigation, Calendar, Zap, RefreshCw } from 'lucide-react';
 import { collection, getDocs, doc, getDoc, updateDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import UserNavBar from '../components/UserNavBar';
 import UserTopBar from '../components/UserTopBar';
+import { notifyBookingCancelled, notifyCoachCancellation, notifyAdminCancellation, getCoachIdForClass, getClassAttendeeCount } from '../utils/notificationService';
 
 interface ClassData {
     id: string;
@@ -37,7 +38,7 @@ const UserDashboard = () => {
     const [userReservations, setUserReservations] = useState<any[]>([]);
     
     // Cancellation State
-    const [selectedClassForCancel, setSelectedClassForCancel] = useState<{classData: ClassData, reservationId: string} | null>(null);
+    const [selectedClassForCancel, setSelectedClassForCancel] = useState<{classData: ClassData, reservationId: string, classDate: string, classId: string} | null>(null);
     const [cancelLoading, setCancelLoading] = useState(false);
     const [cancelSuccess, setCancelSuccess] = useState(false);
     const [cancelError, setCancelError] = useState('');
@@ -161,25 +162,49 @@ const UserDashboard = () => {
                         </div>
                     </div>
                     
-                    <div className="mt-6 bg-[#1A1A1A] border border-[#333] rounded-2xl p-4 flex flex-col gap-2">
-                        <div className="flex justify-between items-center">
-                            <div className="flex flex-col">
-                                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Créditos Semanales</span>
-                                <span className="text-white font-black text-xl">{userData?.credits || 0} <span className="text-gray-500 text-sm font-bold">/ {userData?.limiteSemanal || 0}</span></span>
+                    <div className="mt-6 bg-[#1A1A1A] border border-[#333] rounded-3xl p-5 relative overflow-hidden group">
+                        {/* Background glow effect */}
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#E13038]/5 blur-3xl rounded-full group-hover:bg-[#E13038]/10 transition-colors" />
+                        
+                        <div className="relative z-10 flex flex-col gap-3">
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                                        <Zap size={12} className="text-[#E13038]" /> Energía Semanal
+                                    </span>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-white font-black text-3xl tracking-tighter">{userData?.credits || 0}</span>
+                                        <span className="text-gray-500 text-sm font-bold">/ {userData?.limiteSemanal || 0}</span>
+                                    </div>
+                                </div>
+                                {userData?.saldoExtra && userData.saldoExtra > 0 ? (
+                                    <div className="text-right bg-[#E13038]/10 border border-[#E13038]/30 px-3 py-1.5 rounded-xl">
+                                        <span className="text-[#E13038] text-[9px] font-black uppercase tracking-widest block mb-0.5">Saldo Extra</span>
+                                        <span className="text-[#E13038] font-black text-lg leading-none">+{userData.saldoExtra}</span>
+                                    </div>
+                                ) : null}
                             </div>
-                            <div className="text-right flex flex-col">
-                                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Créditos Extra</span>
-                                <span className="text-[#E13038] font-black text-xl">+{userData?.saldoExtra || 0}</span>
+                            
+                            {/* Animated Progress Bar */}
+                            <div className="w-full bg-[#111] h-3 rounded-full overflow-hidden shadow-inner relative">
+                                <div 
+                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#8c1c22] to-[#E13038] rounded-full transition-all duration-1000 ease-out flex items-center overflow-hidden"
+                                    style={{ width: `${Math.min(((userData?.credits || 0) / (userData?.limiteSemanal || 1)) * 100, 100)}%` }}
+                                >
+                                    <div className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full animate-[shimmer_2s_infinite]" />
+                                </div>
                             </div>
-                        </div>
-                        <div className="w-full bg-[#111] h-2 rounded-full overflow-hidden mt-1">
-                            <div className="bg-[#E13038] h-full" style={{ width: `${Math.min(((userData?.credits || 0) / (userData?.limiteSemanal || 1)) * 100, 100)}%` }} />
-                        </div>
-                        <div className="flex justify-between items-center mt-1">
-                            <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1"><Info size={10} /> Total: {(userData?.credits || 0) + (userData?.saldoExtra || 0)} CR</span>
-                            <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-                                ↺ Reset: {unlockConfig.dayName} {unlockConfig.time}
-                            </span>
+                            
+                            <div className="flex justify-between items-center mt-1">
+                                <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md">
+                                    <Info size={10} className="text-gray-500" /> 
+                                    Total disponible: <span className="text-white">{(userData?.credits || 0) + (userData?.saldoExtra || 0)}</span>
+                                </span>
+                                <span className="text-gray-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                                    <RefreshCw size={10} className="text-gray-600" />
+                                    {unlockConfig.dayName} {unlockConfig.time}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -195,7 +220,7 @@ const UserDashboard = () => {
                             onClick={() => {
                                 const classDateForCancel = new Date(nextClassData.exactDate);
                                 setSelectedDate(classDateForCancel);
-                                setSelectedClassForCancel({ classData: nextClassData.classInfo, reservationId: nextClassData.id });
+                                setSelectedClassForCancel({ classData: nextClassData.classInfo, reservationId: nextClassData.id, classDate: nextClassData.classDate, classId: nextClassData.classId });
                             }}
                             className="bg-gradient-to-br from-[#1c1b1b] to-[#111] border border-[#E13038]/30 rounded-2xl p-5 relative overflow-hidden group cursor-pointer hover:border-[#E13038] transition-all"
                         >
@@ -206,7 +231,17 @@ const UserDashboard = () => {
                                 </span>
                                 <div className="flex items-center justify-between mt-4">
                                     <div className="flex flex-col">
-                                        <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Mañana a las</span>
+                                        <span className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+                                            {(() => {
+                                                const now = new Date();
+                                                const classDay = nextClassData.exactDate;
+                                                const diffMs = classDay.getTime() - now.getTime();
+                                                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                                if (diffDays <= 0) return 'Hoy a las';
+                                                if (diffDays === 1) return 'Mañana a las';
+                                                return classDay.toLocaleDateString('es-ES', { weekday: 'long' }).charAt(0).toUpperCase() + classDay.toLocaleDateString('es-ES', { weekday: 'long' }).slice(1) + ' a las';
+                                            })()}
+                                        </span>
                                         <span className="text-[#E13038] text-xl font-black">{nextClassData.classInfo.startTime}</span>
                                     </div>
                                     <div className="flex flex-col items-end">
@@ -232,7 +267,7 @@ const UserDashboard = () => {
                                 onClick={() => {
                                     const classDateForCancel = new Date(res.exactDate);
                                     setSelectedDate(classDateForCancel);
-                                    setSelectedClassForCancel({ classData: res.classInfo, reservationId: res.id });
+                                    setSelectedClassForCancel({ classData: res.classInfo, reservationId: res.id, classDate: res.classDate, classId: res.classId });
                                 }}
                                 className="bg-[#1A1A1A] border border-[#333] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-[#E13038]/50 transition-colors"
                             >
@@ -256,9 +291,19 @@ const UserDashboard = () => {
                         ))}
                     </div>
                 ) : futureReservations.length === 0 && !loading && (
-                    <div className="bg-[#1c1b1b] border border-[#333] rounded-2xl p-8 text-center flex flex-col items-center justify-center opacity-70 mt-8">
-                        <Info size={32} className="text-gray-600 mb-3" />
-                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Aún no tienes clases reservadas</p>
+                    <div className="bg-[#1c1b1b] border border-[#333] rounded-2xl p-10 text-center flex flex-col items-center justify-center mt-8 shadow-[inset_0_4px_20px_rgba(0,0,0,0.5)]">
+                        <div className="w-20 h-20 bg-[#111] rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(225,48,56,0.1)] border border-[#333]">
+                            <div className="text-[#E13038]">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M6 18h12M6 6h12M12 2v20"/>
+                                    <path d="m9 9 6 6M15 9l-6 6"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <h4 className="text-white font-black text-xl uppercase tracking-tighter mb-2">Semana en blanco</h4>
+                        <p className="text-gray-400 font-bold text-xs leading-relaxed max-w-[200px] mb-6">
+                            No tienes reservas a la vista. ¡Levántate del sofá y apúntate a sufrir un poco!
+                        </p>
                     </div>
                 )}
             </main>
@@ -342,7 +387,28 @@ const UserDashboard = () => {
 
                                                         // Refresh UI
                                                         setUserReservations(prev => prev.filter(r => r.id !== resId));
+                                                        if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
                                                         setCancelSuccess(true);
+
+                                                        // Notifications (fire and forget)
+                                                        try {
+                                                            const classDate = selectedClassForCancel.classDate;
+                                                            const className = selectedClassForCancel.classData.title;
+                                                            const classId = selectedClassForCancel.classId;
+                                                            
+                                                            await notifyBookingCancelled(userData!.uid, className, classDate, canRefund);
+                                                            
+                                                            const coachId = await getCoachIdForClass(classId);
+                                                            if (coachId) {
+                                                                await notifyCoachCancellation(coachId, userData!.displayName || 'Usuario', className, classDate);
+                                                            }
+                                                            
+                                                            const count = await getClassAttendeeCount(classId, classDate);
+                                                            await notifyAdminCancellation(userData!.displayName || 'Usuario', className, classDate, count, selectedClassForCancel.classData.capacity);
+                                                        } catch (notifErr) {
+                                                            console.error('Error enviando notificaciones:', notifErr);
+                                                        }
+
                                                         setTimeout(() => {
                                                             setSelectedClassForCancel(null);
                                                             setCancelSuccess(false);

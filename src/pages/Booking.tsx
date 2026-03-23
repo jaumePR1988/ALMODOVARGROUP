@@ -7,6 +7,18 @@ import { useAuth } from '../contexts/AuthContext';
 import UserNavBar from '../components/UserNavBar';
 import ClassDetailModal from '../components/ClassDetailModal';
 import UserTopBar from '../components/UserTopBar';
+import {
+    notifyBookingConfirmed,
+    notifyBookingCancelled,
+    notifyCoachCancellation,
+    notifyAdminCancellation,
+    notifyClassFull,
+    notifyWaitlistJoined,
+    notifyWaitlistConfirmed,
+    getClassAttendeeCount,
+    getCoachIdForClass,
+    sendNotification
+} from '../utils/notificationService';
 
 interface ClassData {
     id: string;
@@ -52,6 +64,7 @@ const Booking = () => {
     const [lockedSpots, setLockedSpots] = useState<number>(0);
     const [isWaitlistInvited, setIsWaitlistInvited] = useState<boolean>(false);
     const [currentInviteId, setCurrentInviteId] = useState<string | null>(null);
+    const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
     
     // Cancellation State
     const [selectedClassForCancel, setSelectedClassForCancel] = useState<{classData: ClassData, reservationId: string} | null>(null);
@@ -144,23 +157,32 @@ const Booking = () => {
             const attendeesList = resSnap.docs.map(doc => doc.data());
             setSelectedClassAttendees(attendeesList);
 
-            const invSnap = await getDocs(query(
+            const waitlistSnap = await getDocs(query(
                 collection(db, 'waitlist'),
                 where('classId', '==', selectedClassForBooking.id),
-                where('classDate', '==', dateStr),
-                where('status', '==', 'invited')
+                where('classDate', '==', dateStr)
             ));
+            
+            const waitlistDocs = waitlistSnap.docs.map(d => ({id: d.id, ...d.data()}));
+            waitlistDocs.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
             
             const now = Date.now();
             let validInvitesCount = 0;
             let userIsInvited = false;
             let inviteId: string | null = null;
+            let position = null;
             
-            for (const d of invSnap.docs) {
-                const data = d.data();
-                if (data.expiresAt && new Date(data.expiresAt).getTime() > now) {
+            const waitingList = waitlistDocs.filter((d: any) => d.status === 'waiting');
+            const userWaitlistIndex = waitingList.findIndex((d: any) => d.userId === userData?.uid);
+            if (userWaitlistIndex !== -1) {
+                position = userWaitlistIndex + 1;
+            }
+
+            for (const data of waitlistDocs) {
+                const d = data as any;
+                if (d.status === 'invited' && d.expiresAt && new Date(d.expiresAt).getTime() > now) {
                     validInvitesCount++;
-                    if (data.userId === userData?.uid) {
+                    if (d.userId === userData?.uid) {
                         userIsInvited = true;
                         inviteId = d.id;
                     }
@@ -170,6 +192,7 @@ const Booking = () => {
             setLockedSpots(attendeesList.length + validInvitesCount);
             setIsWaitlistInvited(userIsInvited);
             setCurrentInviteId(inviteId);
+            setWaitlistPosition(position);
         };
         fetchAttendees();
     }, [selectedClassForBooking, selectedDate, userData?.uid]);
@@ -423,8 +446,21 @@ const Booking = () => {
                             await updateDoc(doc(db, 'waitlist', currentInviteId), {
                                 status: 'confirmed'
                             });
+                            // Notify coach + admin that waitlist user confirmed
+                            notifyWaitlistConfirmed(c.id, userData.displayName || 'Usuario', c.title, dateStr);
                         }
 
+                        // ── Notifications ──
+                        // 1. Notify user: booking confirmed
+                        notifyBookingConfirmed(userData.uid, c.title, dateStr, c.startTime);
+
+                        // 2. Check if class is now full → notify coach + admin
+                        const attendeeCount = await getClassAttendeeCount(c.id, dateStr);
+                        if (attendeeCount >= c.capacity) {
+                            notifyClassFull(c.id, c.title, dateStr, c.capacity, c.category);
+                        }
+
+                        if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
                         setBookingSuccess(true);
                         
                         setUserReservations(prev => [...prev, {
@@ -456,6 +492,7 @@ const Booking = () => {
                 waitlistLoading={waitlistLoading}
                 lockedSpots={lockedSpots}
                 isWaitlistInvited={isWaitlistInvited}
+                waitlistPosition={waitlistPosition}
                 onJoinWaitlist={async (c) => {
                     if (!userData) return;
                     setWaitlistLoading(true);
@@ -469,12 +506,23 @@ const Booking = () => {
                             status: 'waiting',
                             createdAt: new Date().toISOString()
                         });
+                        if (navigator.vibrate) navigator.vibrate([20]);
                         setUserWaitlists(prev => [...prev, {
                             id: wlRef.id,
                             classId: c.id,
                             classDate: dateStr,
                             status: 'waiting'
                         }]);
+
+                        // Fetch real position
+                        const wlDocsSnap = await getDocs(query(collection(db, 'waitlist'), where('classId', '==', c.id), where('classDate', '==', dateStr)));
+                        const wlDocs = wlDocsSnap.docs.map(d => ({id: d.id, ...d.data()}) as any);
+                        wlDocs.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+                        const userIndex = wlDocs.findIndex((w: any) => w.userId === userData.uid);
+                        const pos = userIndex !== -1 ? userIndex + 1 : wlDocs.length;
+
+                        // Notify user: you're on the waitlist with position
+                        notifyWaitlistJoined(userData.uid, c.title, dateStr, pos);
                     } catch (e) {
                         console.error(e);
                     } finally {
@@ -561,6 +609,30 @@ const Booking = () => {
                                                         }
 
                                                         const dateStrForCancel = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+                                                        // ── Notifications on cancel ──
+                                                        // 1. Notify user
+                                                        if (userData?.uid) {
+                                                            notifyBookingCancelled(userData.uid, selectedClassForCancel.classData.title, dateStrForCancel, canRefund);
+                                                        }
+
+                                                        // 2. Notify coach of this class
+                                                        const cancelCoachId = await getCoachIdForClass(selectedClassForCancel.classData.id);
+                                                        if (cancelCoachId) {
+                                                            notifyCoachCancellation(cancelCoachId, userData?.displayName || 'Usuario', selectedClassForCancel.classData.title, dateStrForCancel);
+                                                        }
+
+                                                        // 3. Notify admin with updated seat count
+                                                        const seatsAfterCancel = await getClassAttendeeCount(selectedClassForCancel.classData.id, dateStrForCancel);
+                                                        notifyAdminCancellation(
+                                                            userData?.displayName || 'Usuario',
+                                                            selectedClassForCancel.classData.title,
+                                                            dateStrForCancel,
+                                                            seatsAfterCancel,
+                                                            selectedClassForCancel.classData.capacity
+                                                        );
+
+                                                        // 4. Waitlist: invite next person
                                                         const wlSnap = await getDocs(query(
                                                             collection(db, 'waitlist'), 
                                                             where('classId', '==', selectedClassForCancel.classData.id),
@@ -578,15 +650,14 @@ const Booking = () => {
                                                                 expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
                                                             });
                                                             
-                                                            await addDoc(collection(db, 'notifications'), {
-                                                                userId: nextUser.userId,
-                                                                title: '¡Plaza disponible!',
-                                                                message: `¡Se ha liberado una plaza en ${selectedClassForCancel.classData.title}! Tienes 15 minutos para aceptarla o la perderás.`,
-                                                                type: 'waitlist',
-                                                                read: false,
-                                                                createdAt: new Date().toISOString(),
-                                                                actionUrl: '/reservar'
-                                                            });
+                                                            // Notify waitlisted user: plaza available
+                                                            sendNotification(
+                                                                nextUser.userId,
+                                                                'waitlist_invited',
+                                                                '🎉 ¡Plaza Disponible!',
+                                                                `¡Se ha liberado una plaza en ${selectedClassForCancel.classData.title}! Tienes 15 minutos para aceptarla o la perderás.`,
+                                                                '/reservar'
+                                                            );
                                                         }
 
                                                         setUserReservations(prev => prev.filter(r => r.id !== resId));

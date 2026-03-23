@@ -46,6 +46,7 @@ interface ClassDetailModalProps {
     reservationStatus?: string;
     isWaitlisted?: boolean;
     isWaitlistInvited?: boolean;
+    waitlistPosition?: number | null;
     onJoinWaitlist?: (classData: ClassData) => void;
     waitlistLoading?: boolean;
     lockedSpots?: number;
@@ -73,6 +74,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
     reservationStatus,
     isWaitlisted = false,
     isWaitlistInvited = false,
+    waitlistPosition = null,
     onJoinWaitlist,
     waitlistLoading = false,
     lockedSpots,
@@ -431,9 +433,10 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                             isWaitlisted ? (
                                 <button
                                     disabled
-                                    className="w-full py-4 bg-orange-500/20 text-orange-500 font-black uppercase tracking-widest rounded-xl border border-orange-500/30 flex justify-center items-center"
+                                    className="w-full py-4 bg-orange-500/20 text-orange-500 border border-orange-500/30 rounded-xl flex flex-col justify-center items-center"
                                 >
-                                    En Lista de Espera
+                                    <span className="font-black uppercase tracking-widest text-sm mb-0.5">En Lista de Espera</span>
+                                    {waitlistPosition && <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80">Posición: {waitlistPosition}</span>}
                                 </button>
                             ) : (
                                 <button

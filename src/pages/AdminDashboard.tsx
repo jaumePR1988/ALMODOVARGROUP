@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Euro, CreditCard, BarChart3, FileCheck, Calendar, LogOut, Loader2, ChevronLeft, ChevronRight, X, Clock } from 'lucide-react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import AdminNavBar from '../components/AdminNavBar';
@@ -69,6 +69,9 @@ const AdminDashboard = () => {
 
     // Attendee modal
     const [selectedSlot, setSelectedSlot] = useState<WeeklyClassSlot | null>(null);
+    const [isEditingSlot, setIsEditingSlot] = useState(false);
+    const [editCapacity, setEditCapacity] = useState(0);
+    const [editSaving, setEditSaving] = useState(false);
 
     // ─── Fetch global metrics (once) ───
     useEffect(() => {
@@ -265,6 +268,28 @@ const AdminDashboard = () => {
         };
         fetchWeek();
     }, [weekMonday]);
+
+    const handleSaveClassEdit = async () => {
+        if (!selectedSlot) return;
+        setEditSaving(true);
+        try {
+            await updateDoc(doc(db, 'classes', selectedSlot.classId), {
+                capacity: editCapacity
+            });
+            // Update local state to reflect change instantly in the modal
+            setSelectedSlot({ ...selectedSlot, capacity: editCapacity });
+            setIsEditingSlot(false);
+            
+            // Also update the weekSlots so the background table updates
+            setWeekSlots(prev => prev.map(s => s.classId === selectedSlot.classId ? { ...s, capacity: editCapacity } : s));
+            
+        } catch (error) {
+            console.error('Error updating class:', error);
+            alert('Error al actualizar la clase.');
+        } finally {
+            setEditSaving(false);
+        }
+    };
 
     const formatCurrency = (val: number) =>
         val.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -575,13 +600,64 @@ const AdminDashboard = () => {
                                     {selectedSlot.dayLabel} {selectedSlot.dateStr.slice(5).replace('-', '/')} {selectedSlot.startTime && `· ${selectedSlot.startTime}`}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => setSelectedSlot(null)}
-                                className="w-8 h-8 rounded-full bg-[#E13038] flex items-center justify-center active:scale-90 transition-transform"
-                            >
-                                <X size={16} className="text-white" />
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {!isEditingSlot && (
+                                    <button
+                                        onClick={() => {
+                                            setEditCapacity(selectedSlot.capacity);
+                                            setIsEditingSlot(true);
+                                        }}
+                                        className="text-xs font-bold text-[#E13038] hover:text-white uppercase tracking-widest transition-colors"
+                                    >
+                                        Editar
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        setSelectedSlot(null);
+                                        setIsEditingSlot(false);
+                                    }}
+                                    className="w-8 h-8 rounded-full bg-[#E13038] flex items-center justify-center active:scale-90 transition-transform"
+                                >
+                                    <X size={16} className="text-white" />
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Edit Section */}
+                        {isEditingSlot && (
+                            <div className="p-5 bg-[#222] border-b border-white/5 shrink-0 flex items-end gap-4 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="flex-1">
+                                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase block mb-1">Capacidad Total</label>
+                                    <input 
+                                        type="number" 
+                                        min={selectedSlot.reserved} // Prevent setting capacity lower than current reserved
+                                        value={editCapacity}
+                                        onChange={(e) => setEditCapacity(Number(e.target.value))}
+                                        className="w-full bg-[#1A1A1A] border border-[#333] rounded-lg p-2.5 text-white focus:border-[#E13038] focus:ring-0 outline-none uppercase font-bold text-center"
+                                    />
+                                    {editCapacity < selectedSlot.reserved && (
+                                        <p className="text-[9px] text-[#E13038] font-bold mt-1 uppercase">No puedes bajar la capacidad por debajo de las reservas actuales ({selectedSlot.reserved})</p>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setIsEditingSlot(false)}
+                                        className="px-4 py-2.5 bg-[#333] hover:bg-[#444] rounded-lg text-xs font-bold text-white uppercase transition-colors"
+                					>
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        onClick={handleSaveClassEdit}
+                                        disabled={editSaving || editCapacity < selectedSlot.reserved}
+                                        className="px-4 py-2.5 bg-[#E13038] hover:bg-[#ff535b] rounded-lg text-xs font-bold text-white uppercase transition-colors disabled:opacity-50 flex items-center gap-2"
+                					>
+                                        {editSaving && <Loader2 size={12} className="animate-spin" />}
+                                        {editSaving ? 'Guardando...' : 'Guardar'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Stats bar */}
                         <div className="px-5 py-3 bg-[#222] flex justify-between items-center shrink-0">

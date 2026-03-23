@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, User, Plus, Dumbbell, FileText, Library } from 'lucide-react';
+import { Calendar, User, Plus, Dumbbell, Bell, Library } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const CoachNavBar = () => {
@@ -34,15 +34,16 @@ const CoachNavBar = () => {
                         </Link>
                     </div>
 
-                    {/* Botón 3: Subir Sesión PDF (Derecha - se mueve a la izquierda para balancear o se mantiene a la derecha) */}
+                    {/* Botón 3: Avisos / Notificaciones */}
                     <div className={`absolute bottom-8 transition-all duration-300 delay-[100ms] ease-out flex flex-col items-center gap-2 ${isOpen ? 'translate-x-[75px] -translate-y-[60px] scale-100 opacity-100 pointer-events-auto' : 'translate-x-0 translate-y-0 scale-50 opacity-0'}`}>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md text-center leading-none pb-1">Subir<br/>Sesión</span>
-                        <button 
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md text-center leading-none pb-1">Avisos</span>
+                        <Link 
+                            to="/notificaciones"
                             onClick={() => setIsOpen(false)}
                             className="w-14 h-14 bg-[#1A1A1A] border border-[#333] rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 hover:border-[#E13038] group"
                         >
-                            <FileText size={24} className="group-hover:text-[#E13038] transition-colors" />
-                        </button>
+                            <Bell size={24} className="group-hover:text-[#E13038] transition-colors" />
+                        </Link>
                     </div>
 
                     {/* Botón 1: Biblioteca Ejercicios (Izquierda) */}

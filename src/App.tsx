@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import SplashScreen from './components/SplashScreen';
 import Login from './components/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -20,6 +21,8 @@ import Notifications from './pages/Notifications';
 import { useAuth } from './contexts/AuthContext';
 import TermsAcceptanceModal from './components/TermsAcceptanceModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { requestPushPermissions } from './utils/pushService';
+import { useEffect } from 'react';
 
 function RoleBasedRedirect() {
     const { userData, loading } = useAuth();
@@ -37,6 +40,13 @@ function App() {
   const { userData } = useAuth();
   const [loading, setLoading] = useState(true);
 
+  // Intentamos registrar push tokens una vez que tenemos los datos del usuario logueado
+  useEffect(() => {
+    if (userData?.uid && !loading) {
+        requestPushPermissions(userData.uid);
+    }
+  }, [userData?.uid, loading]);
+
   if (loading) {
     return <SplashScreen onFinish={() => setLoading(false)} />;
   }
@@ -45,6 +55,7 @@ function App() {
     <ErrorBoundary>
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       
       {/* Rutas protegidas genéricas y redirección según rol */}
       <Route element={<ProtectedRoute />}>

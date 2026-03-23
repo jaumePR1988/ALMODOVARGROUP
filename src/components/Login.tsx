@@ -391,7 +391,11 @@ const Login = () => {
 
                 {/* Footer del Formulario */}
                 <div className="flex justify-between items-center w-full mt-8 px-1">
-                    <button className="text-[11px] font-medium text-[#DDABA5] hover:text-white transition-colors">
+                    <button 
+                        type="button"
+                        onClick={() => navigate('/forgot-password')}
+                        className="text-[11px] font-medium text-[#DDABA5] hover:text-white transition-colors"
+                    >
                         ¿OLVIDASTE TU ACCESO?
                     </button>
                     <button 

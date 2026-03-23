@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { ArrowLeft, Bell, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Bell, CheckCircle2, Clock, XCircle, Flame, UserCheck, CalendarCheck } from 'lucide-react';
 
 interface AppNotification {
   id: string;
@@ -14,6 +14,7 @@ interface AppNotification {
   createdAt: any;
   actionUrl?: string;
   type?: 'info' | 'waitlist' | 'alert';
+  notificationType?: string;
 }
 
 const Notifications = () => {
@@ -164,7 +165,11 @@ const Notifications = () => {
                       notif.type === 'alert' ? 'bg-red-500/20 text-red-400' : 
                       'bg-blue-500/20 text-blue-400'}
                   `}>
-                    {notif.type === 'waitlist' ? <Clock className="w-5 h-5" /> : 
+                    {notif.notificationType === 'class_full' ? <Flame className="w-5 h-5" /> :
+                     notif.notificationType === 'booking_cancelled' || notif.notificationType === 'class_vacancy' ? <XCircle className="w-5 h-5" /> :
+                     notif.notificationType === 'waitlist_confirmed' ? <UserCheck className="w-5 h-5" /> :
+                     notif.notificationType === 'booking_confirmed' ? <CalendarCheck className="w-5 h-5" /> :
+                     notif.type === 'waitlist' ? <Clock className="w-5 h-5" /> : 
                      notif.type === 'alert' ? <Bell className="w-5 h-5" /> : 
                      <CheckCircle2 className="w-5 h-5" />}
                   </div>
